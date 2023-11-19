@@ -1,0 +1,10 @@
+/__pycache__/**/*
+/.archive/**/*
+/.vscode/**/*
+/mech325env/**/*
+/latex_output/aux/**/*
+.DS_Store
+
+# For files that are created for temporary testing, prefix the file name with "temp"
+**/temp*.*
+

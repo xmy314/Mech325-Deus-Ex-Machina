@@ -1,0 +1,42 @@
+\usepackage{color,graphicx} %allows use of postscript graphics and color output
+\textwidth 170mm
+\textheight 210mm
+\topmargin 0.0mm
+\oddsidemargin 0mm
+\evensidemargin 0mm
+
+\usepackage{siunitx}
+\sisetup{output-exponent-marker=\ensuremath{\mathrm{e}}}
+
+\usepackage{pdfpages}
+
+
+\usepackage{amsmath}
+\usepackage{multicol}
+\usepackage{tabularx}
+\usepackage{placeins}
+\usepackage{float}
+\usepackage{listings}
+\usepackage[utf8]{inputenc}
+\usepackage{mdframed}
+\usepackage{graphics}
+\usepackage{xspace}
+
+\usepackage{tikz}
+\usepackage{tikz-3dplot}
+
+\usepgflibrary{arrows.meta}
+\usetikzlibrary{shapes.geometric, arrows,scopes}
+
+\newtheorem{problem}{Problem}
+\newtheorem{subproblem}{}[problem]
+\newenvironment{solution}[1][\it{Solution}]{\textbf{#1. } }{$\square$}
+
+
+\newcommand{\pr}[1]{\begin{problem}#1\end{problem}}
+\newcommand{\prs}[1]{\begin{subproblem}#1\end{subproblem}}
+% \renewcommand*{\thesubproblem}{(\Alph{subproblem})}
+\renewcommand*{\thesubproblem}{(\roman{subproblem})}
+
+\usepackage{parskip}
+
