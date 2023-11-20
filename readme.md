@@ -52,6 +52,7 @@ Features:
 | BEVEL GEAR        |                               |  x            |               |               |
 | WORM GEAR         |                               |  x            |               |               |
 | RACK PINION       |                               |               |               |               |
+| BUSHING           | Shigley Selection             |  x            |  x            |               |
 | BUSHING           |                               |  x            |               |               |
 | BALL AND CYLINDRICAL BEARING RADIAL | Selection   |  x            |  x            |               |
 | BALL AND CYLINDRICAL BEARING RADIAL | Clearance   |               |               |               |

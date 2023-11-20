@@ -17,38 +17,21 @@ class LoadType(Enum):
     MOMENT = 1
 
 
-# Unit for length, force, and moment are not important as long as
-# unit length cross unit force = unit moment.
-context = {
-    "knowns": {
-
-    },
-    "load": [
-        # Type, point that the load acts upon, the components of the load.
-        (LoadType.MOMENT, [0, 0, 0], [0, 0, -340]),
-        (LoadType.FORCE, [0, 0.2, 0.05], [0, 0, 10000]),
-        (LoadType.FORCE, [0, 0, 0.1], [S("F_{bx}"), S("F_{by}"), 0]),
-        (LoadType.FORCE, [0, 0, 0.35], [S("F_{ax}"), S("F_{ay}"), 0]),
-        (LoadType.FORCE, [0, 0.075, 0.45], [S("F")*-cos(radians(20)), S("F")*-sin(radians(20)), 0]),
-        (LoadType.FORCE, [0, 0.1, 0.6], [0, 0, S("F_z")]),
-    ]
-}
-
-
 def solve_reaction_force(context):
+    """given a bunch of force and moment loads, solve."""
 
     loads = context["load"]
 
     Fx, Fy, Fz, Mx, My, Mz = 0, 0, 0, 0, 0, 0
     for load in loads:
         if load[0] == LoadType.MOMENT:
-            torque = load[2]
+            torque = load[3]
             Mx += torque[0]
             My += torque[1]
             Mz += torque[2]
         else:
-            rx, ry, rz = load[1]
-            fx, fy, fz = load[2]
+            rx, ry, rz = load[2]
+            fx, fy, fz = load[3]
             Fx += fx
             Fy += fy
             Fz += fz
@@ -62,30 +45,32 @@ def solve_reaction_force(context):
         if isinstance(expr, sym.Expr):
             all_vars += expr.free_symbols
 
-    targets = [v for v in all_vars if not v in context["knowns"]]
+    targets = [v for v in all_vars if not v in context["vars"]]
 
     result = sym.solve(exprs, targets, dict=True)
-    context["knowns"].update(result[0])
+    context["vars"].update(result[0])
     for load in loads:
         for i in range(3):
-            if not isinstance(load[2][i], sym.Expr):
+            if not isinstance(load[3][i], sym.Expr):
                 continue
-            expr = load[2][i]
+            expr = load[3][i]
             sub_dict = {}
             for symbol in expr.free_symbols:
-                sub_dict[symbol] = context["knowns"][symbol]
-            load[2][i] = expr.evalf(subs=sub_dict)
+                sub_dict[symbol] = context["vars"][symbol]
+            load[3][i] = expr.evalf(subs=sub_dict)
 
-    expr = Mx
-    sub_dict = {}
-    for symbol in expr.free_symbols:
-        sub_dict[symbol] = context["knowns"][symbol]
-    print(expr.evalf(subs=sub_dict))
+    log = r"\begin{align*}"+"\n"
+    for load in context["load"]:
+        log += f"{load[1]} & = {load[3][0]:7.2f}\\hat{{i}}+{load[3][1]:7.2f}\\hat{{j}}+{load[3][2]:7.2f}\\hat{{k}}"+r"\\"+"\n"
+        log += f"          & = {sqrt(load[3][0]**2+load[3][1]**2):7.2f}\\hat{{r}}+{load[3][2]:7.2f}\\hat{{k}}"+r"\\"+"\n"
+    log += r"\end{align*}"+"\n"
+    return log
 
 
 def fbd3d(context):
+    """return the latex code that draws out the forces in 3d."""
     loads = context["load"]
-    loads.sort(key=lambda x: x[1][2])
+    loads.sort(key=lambda x: x[2][2])
     forces = []
     moments = []
     for load in loads:
@@ -94,9 +79,9 @@ def fbd3d(context):
         else:
             forces.append(load)
 
-    normalized_unit_radial_length = sum([sqrt(x[1][0]**2+x[1][1]**1) for x in loads])/len(loads)
-    normalized_unit_axial_length = (max([x[1][2] for x in loads])-min([x[1][2] for x in loads]))/10
-    normalized_unit_force = sum([sqrt(x[2][0]**2+x[2][1]**1+x[2][2]**2) for x in forces])/len(forces)
+    normalized_unit_radial_length = sum([sqrt((x[2][0]**2)+(x[2][1]**2)) for x in loads])/len(loads)
+    normalized_unit_axial_length = (max([x[2][2] for x in loads])-min([x[2][2] for x in loads]))/10
+    normalized_unit_force = sum([sqrt(x[3][0]**2+x[3][1]**1+x[3][2]**2) for x in forces])/len(forces)
 
     ret3d = r"""
 \tdplotsetmaincoords{70}{110}
@@ -106,7 +91,7 @@ def fbd3d(context):
     axis/.style={thin,gray},
     forces/.style={thick,blue},
     cforces/.style={thin,blue},
-    marking/.style={densely dashed,thin,gray},
+    marking/.style={densely dashed,thin,gray,font=\tiny},
 ]{
     \draw[axis,-latex](0,0,-2)--(1,0,-2)node[above right]{$x$};
     \draw[axis,-latex](0,0,-2)--(0,1,-2)node[above left]{$y$};
@@ -114,48 +99,53 @@ def fbd3d(context):
     
     \draw[thick](0,0,0)--(0,0,10);
 """
-    for force in forces:
-        nf = [x/normalized_unit_force for x in force[2]]
-        np = [
-            force[1][0]/normalized_unit_radial_length,
-            force[1][1]/normalized_unit_radial_length,
-            force[1][2]/normalized_unit_axial_length,
-        ]
+    for i in range(len(loads)-1):
+        npz0 = loads[i][2][2]/normalized_unit_axial_length
+        npz1 = loads[i+1][2][2]/normalized_unit_axial_length
+        if npz1-npz0 == 0:
+            continue
+        ret3d += f"    \draw(0,-0.1,{npz0})--(0,-1.7,{npz0});\n"
+        ret3d += f"    \draw(0,-0.1,{npz1})--(0,-1.7,{npz1});\n"
+        ret3d += f"    \draw[latex-latex](0,-1.5,{npz0})--(0,-1.5,{npz1}) node[pos=0.5,below] {{{round_nsig(loads[i+1][2][2]-loads[i][2][2],3)}}};\n\n"
 
-        # the components.
-        ret3d += f"    \draw[forces,-latex]({-nf[0]+np[0]},{-nf[1]+np[1]},{-nf[2]+np[2]})--({np[0]},{np[1]},{np[2]}) node[pos=0, left]{{$F_O$}};\n"
+    for force in forces:
+        nf = [x/normalized_unit_force for x in force[3]]
+        np = [
+            force[2][0]/normalized_unit_radial_length,
+            force[2][1]/normalized_unit_radial_length,
+            force[2][2]/normalized_unit_axial_length,
+        ]
 
         # the indicator lines
         if np[1] != 0:
-            ret3d += f"    \draw[marking]({np[0]},{np[1]},{np[2]})--({np[0]},0,{np[2]}) node[pos=0.5,right]{{{force[1][1]}}};\n"
+            ret3d += f"    \draw[marking]({np[0]},{np[1]},{np[2]})--({np[0]},0,{np[2]}) node[pos=.5 ,below, sloped]{{{round_nsig(force[2][1],3)}}};\n"
 
         if np[0] != 0:
-            ret3d += f"    \draw[marking]({np[0]},0,{np[2]})--(0,0,{np[2]}) node[pos=0.5,right]{{{force[1][0]}}};\n"
+            ret3d += f"    \draw[marking]({np[0]},0,{np[2]})--(0,0,{np[2]}) node[pos=.5 ,below, sloped]{{{round_nsig(force[2][0],3)}}};\n"
+
+        # the components.
+        ret3d += f"    \draw[forces,-latex]({-nf[0]+np[0]},{-nf[1]+np[1]},{-nf[2]+np[2]})--({np[0]},{np[1]},{np[2]}) node[pos=0, left]{{${force[1]}$}};\n"
 
         ret3d += "\n"
 
     for moment in moments:
         np = [
-            moment[1][0]/normalized_unit_radial_length,
-            moment[1][1]/normalized_unit_radial_length,
-            moment[1][2]/normalized_unit_axial_length,
+            moment[2][0]/normalized_unit_radial_length,
+            moment[2][1]/normalized_unit_radial_length,
+            moment[2][2]/normalized_unit_axial_length,
         ]
         ret3d += r"    \tdplotsetrotatedcoords{90}{-90}{-90}"+"\n"
-        ret3d += f"    \\tdplotdrawarc[tdplot_rotated_coords,-latex]{{({np[0]},{np[1]},{np[2]})}}{{0.5}}{{0}}{{180}}{{anchor = east}}{{$M$}}\n"
+        ret3d += f"    \\tdplotdrawarc[tdplot_rotated_coords,-latex]{{({np[0]},{np[1]},{np[2]})}}{{0.5}}{{0}}{{180}}{{anchor = east}}{{${moment[1]}$}}\n"
         ret3d += r"    \tdplotsetrotatedcoords{90}{90}{90}"+"\n\n"
 
-    for i in range(len(loads)-1):
-        npz0 = loads[i][1][2]/normalized_unit_axial_length
-        npz1 = loads[i+1][1][2]/normalized_unit_axial_length
-        ret3d += f"    \draw(0,-0.1,{npz0})--(0,-1.7,{npz0});\n"
-        ret3d += f"    \draw(0,-0.1,{npz1})--(0,-1.7,{npz1});\n"
-        ret3d += f"    \draw[latex-latex](0,-1.5,{npz0})--(0,-1.5,{npz1}) node[pos=0.5,below] {{{round_nsig(loads[i+1][1][2]-loads[i][1][2],3)}}};\n\n"
-
     ret3d += "}\n\n"
+
     return ret3d
 
 
 def shaft_analysis(context):
+    """return the latex code that draws out the internal shear, moment, compression, torsion of the shaft."""
+
     loads = context["load"]
     loads.sort(key=lambda x: x[1][2])
     key_points = [(0, (0, 0, 0), (0, 0, 0))]
@@ -257,10 +247,27 @@ def shaft_analysis(context):
     return ret2d
 
 
-solve_reaction_force(context)
-print(context["knowns"])
-ret = fbd3d(context)
-ret += shaft_analysis(context)
+# Unit for length, force, and moment are not important as long as
+# unit length cross unit force = unit moment.
+context = {
+    "vars": {
+
+    },
+    "load": [
+        # Type, point that the load acts upon, the components of the load.
+        (LoadType.FORCE, "R_O", [0, 0, 0], [S("F_{ox}"), S("F_{oy}"), 0]),
+        (LoadType.FORCE, "P_A", [0.125*cos(radians(45+90)), 0.125*sin(radians(45+90)), 0.3], [0.15*S("F_{AT}")*cos(radians(45)), 0.15*S("F_{AT}")*sin(radians(45)), 0]),
+        (LoadType.FORCE, "P_B", [0.125*cos(radians(45-90)), 0.125*sin(radians(45-90)), 0.3], [S("F_{AT}")*cos(radians(45)), S("F_{AT}")*sin(radians(45)), 0]),
+        (LoadType.FORCE, "P_C", [0, 0.15, 0.7], [-50, 0, 0]),
+        (LoadType.FORCE, "P_D", [0, -0.15, 0.7], [-270, 0, 0]),
+        (LoadType.FORCE, "R_E", [0, 0, 0.85], [S("F_{ex}"), S("F_{ey}"), 0]),
+    ]
+}
+
+logs = []
+logs.append(solve_reaction_force(context))
+logs.append(fbd3d(context))
+# ret += shaft_analysis(context)
 
 with open(join("latex_output", "solution.tex"), "w+") as fi:
-    fi.write(ret)
+    fi.write("\n\n".join(logs))

@@ -957,10 +957,10 @@ def retrieve_bushing_information():
 
     def get_full_design_parameter(knowns):
         logs = []
-        if "oiles 500 SP" == knowns["bushing material"]:
-            logs += solve_pathway((PathType.TABLE_OR_FIGURE, "Shigley Table 12-11", [[S("P_{max}"), S("V_{max}"), S("PV_{max}"), S("T")], ["bushing material"]]), knowns)
+        if "Oiles SP 500" == knowns["bushing material"]:
+            logs += solve_pathway((PathType.TABLE_OR_FIGURE, "Shigley Table 12-11", [[S("P_{max}"), S("V_{max}"), S("PV_{max}"), S("T_{max}")], ["bushing material"]]), knowns)
         else:
-            logs += solve_pathway((PathType.TABLE_OR_FIGURE, "Shigley Table 12-8", [[S("P_{max}"), S("V_{max}"), S("PV_{max}"), S("T")], ["bushing material"]]), knowns)
+            logs += solve_pathway((PathType.TABLE_OR_FIGURE, "Shigley Table 12-8", [[S("P_{max}"), S("V_{max}"), S("PV_{max}"), S("T_{max}")], ["bushing material"]]), knowns)
         return logs
 
     def brute_force_selection(knowns):
@@ -1029,14 +1029,21 @@ def retrieve_bushing_information():
             for len_i in range(len(bushing_lengths)):
                 if (bushing_combinations[dia_i][len_i] == 0):
                     continue
+                if (S("D_{constrained}") in knowns and knowns[S("D_{constrained}")] != bushing_diameters[dia_i][0]):
+                    continue
+                if (S("L_{constrained}") in knowns and knowns[S("L_{constrained}")] != bushing_length[len_i]):
+                    continue
                 valid_combinations.append((dia_i, len_i))
 
         # sort combinations by L/D
-        valid_combinations.sort(key=lambda x:  abs(bushing_lengths[x[1]]/bushing_lengths[x[0]][0]-1))
+        valid_combinations.sort(key=lambda x:  abs(bushing_lengths[x[1]]/bushing_diameters[x[0]][0]-1))
 
         for dia_i, len_i in valid_combinations:
+
             bushing_diameter = bushing_diameters[dia_i]
             bushing_length = bushing_lengths[len_i]
+
+            logs.append(f"Try $D={bushing_diameter[0]}$, $L={bushing_length}$.")
 
             # 4 operating values and wear from set upper bounds
             sub_pathways = [
@@ -1047,25 +1054,29 @@ def retrieve_bushing_information():
                 (PathType.EQUATION, "Shigley Equation 12-43", Geqn(S("w"), (S("K")*S("n_d")*S("F")*S("N")*S("t"))/(3*S("L")))),
             ]
 
-            knowns[S("D")] = bushing_diameter
+            knowns[S("D")] = bushing_diameter[0]
             knowns[S("L")] = bushing_length
             for sub_pathway in sub_pathways:
                 solve_pathway(sub_pathway, knowns)
 
-            if (knowns[S("P_{peak}")] > knowns[S("P_{max}")] or
-                    knowns[S("V")] > knowns[S("V_{max}")] or
-                    knowns[S("PV")] > knowns[S("PV_{max}")] or
-                    knowns[S("T")] > knowns[S("T_{max}")] or
-                    knowns[S("w")] > knowns[S("w_{max}")]):
+            if (
+                knowns[S("P_{peak}")] < knowns[S("P_{max}")] and
+                knowns[S("V")] < knowns[S("V_{max}")] and
+                knowns[S("PV")] < knowns[S("PV_{max}")] and
+                knowns[S("T")] < knowns[S("T_{max}")] and
+                knowns[S("w")] < knowns[S("w_{max}")]
+            ):
+                break
+            else:
+                logs.append(f"Fails at least one Requirement.")
                 del knowns[S("P_{peak}")], knowns[S("V")], knowns[S("PV")], knowns[S("T")], knowns[S("w")]
-                continue
 
-            del knowns[S("P_{peak}")], knowns[S("V")], knowns[S("PV")], knowns[S("T")], knowns[S("w")]
-            for sub_pathway in sub_pathways:
-                logs += solve_pathway(sub_pathway, knowns)
+        del knowns[S("P_{peak}")], knowns[S("V")], knowns[S("PV")], knowns[S("T")], knowns[S("w")]
+        for sub_pathway in sub_pathways:
+            logs += solve_pathway(sub_pathway, knowns)
 
-            logs.append(f'Since all 4 operational variables and the wear are within design specifications, D={knowns[S("D")]} and L={knowns[S("L")]} is chosen.')
-            return
+        logs.append(f'Since all 4 operational variables and the wear are within design specifications, D={knowns[S("D")]} and L={knowns[S("L")]} is chosen.')
+        return logs
 
     pathways = [
         # some bearing lookups
@@ -1079,13 +1090,11 @@ def retrieve_bushing_information():
         # some default values.
         (PathType.EQUATION, "Shigley Equation In-Text pg-675", Geqn(S("\\hbar_{cr}"), 2.7)),
         (PathType.EQUATION, "Shigley Equation In-Text pg-675", Geqn(S("T_{\\infty}"), 70)),
-        # (PathType.EQUATION, "Shigley Equation In-Text pg-675", Geqn(S("n_d"), 2)),
-
 
         # The core solving function that just brute forces until a combination is found.
         # Not my proudest work and only deals with one specific type of problem.
         (
-            PathType.EQUATION,
+            PathType.CUSTOM,
             "Shigley Table 12-12",
             [
                 [
@@ -1096,7 +1105,14 @@ def retrieve_bushing_information():
                     S("J")                                                                                                                              # a random constant
                 ]
             ],
-            brute_force_selection)
+            brute_force_selection
+        ),
+
+        (PathType.EQUATION, "Shigley Equation 12-42", Geqn(S("P_{peak}"), (4*S("n_d")*S("F"))/(sym.pi*S("D")*S("L")))),
+        (PathType.EQUATION, "Shigley Equation 12-40", Geqn(S("V"), sym.pi*S("D")*S("N")/12)),
+        (PathType.EQUATION, "Shigley Equation 12-41", Geqn(S("PV"), sym.pi*S("n_d")*S("F")*S("N")/(12*S("L")))),
+        (PathType.EQUATION, "Shigley Equation 12-49", Geqn(S("L"), 720*S("f_s")*S("n_d")*S("F")*S("N")/(S("J")*S("\\hbar_{cr}")*(S("T")-S("T_{\\infty}"))))),
+        (PathType.EQUATION, "Shigley Equation 12-43", Geqn(S("w"), (S("K")*S("n_d")*S("F")*S("N")*S("t"))/(3*S("L")))),
     ]
     return pathways
 
@@ -1226,12 +1242,12 @@ def retrieve_bcbearingall_information():
 
         # if thrust load effect haven't kicked in.
         if (favfr < e_interp):
-            logs.append(f"${favfr}\\leq{e_interp}$")
+            logs.append(f"Since $\\frac{{f_a}}{{vf_r}}={favfr}<{e_interp}=e$, $Y_i=0$")
             logs.append(f"Current selected bearing is Good")
             return logs
 
-        # if thrust load effect haven't kicked in.
-        logs.append(f"${favfr}>{e_interp}$")
+        # if thrust load effect kicked in.
+        logs.append(f"Since $\\frac{{f_a}}{{vf_r}}={favfr}>{e_interp}=e$, $Y_i!=0$")
         y_interp = table_11_1[row_id][5]*(1-t_interp)+table_11_1[row_id+1][5]*t_interp
         logs.append(f"$e1={table_11_1[row_id][1]}$, $e2={table_11_1[row_id+1][1]}$, $Y_i={y_interp}$")
         while True:
@@ -1300,6 +1316,7 @@ def retrieve_bcbearingall_information():
         (PathType.EQUATION, "Shigely Equation 11-text-pg-580:", Geqn(S("a"),  3)),
         (PathType.CUSTOM, "Shigley text", [[S("v")], ["rolling race"]], find_v),
         (PathType.CUSTOM, "Iterative Elimination", [[S("Bore"), S("C_{10}"), S("F_e")], [S("x_d"), S("F_r"), S("F_a"), S("R_d"), "rolling element type", S("v"), S("a_f"), S("a"), S("b"), S("\\theta"), S("x_0")]], iter_proc),
+
         (PathType.EQUATION, "Shigley Equation 11-9", Geqn(S("C_{10\\,min}"),  S("a_f")*S("F_e")*((S("x_d")/(S("x_0")+(S("\\theta")-S("x_0"))*(sym.ln(1/S("R_d"))**(1/S("b")))))**(1/S("a"))))),
         (PathType.EQUATION, "Shigley Equation 11-9", Geqn(S("C_{10}"),        S("a_f")*S("F_e")*((S("x_d")/(S("x_0")+(S("\\theta")-S("x_0"))*(sym.ln(1/S("R"))**(1/S("b")))))**(1/S("a"))))),
         (PathType.TABLE_OR_FIGURE, "Shigley Table 11-2", [[S("C_{10}"),  S("C_0")], [S("Bore"), "rolling element type"]]),
@@ -1630,7 +1647,7 @@ def analyze(context):
                     source[unknown_symbol] = i
 
     # start solving and removing extra branches
-    knowns = context["vars"].copy()
+    knowns = context["vars"]
 
     latex_output = []
 
@@ -1699,8 +1716,8 @@ def compile_latex():
     from os.path import join
     print("Compiling Latex into PDF format.")
     subprocess.Popen(
-        "pdflatex -output-directory=aux main.tex", 
-        shell=True, 
+        "pdflatex -output-directory=aux main.tex",
+        shell=True,
         cwd=join(os.getcwd(), 'latex_output'),
         stdout=subprocess.DEVNULL)
     print("Compilation successful.")
