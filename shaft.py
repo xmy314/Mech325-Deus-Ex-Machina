@@ -99,6 +99,7 @@ def fbd3d(context):
     
     \draw[thick](0,0,0)--(0,0,10);
 """
+
     for i in range(len(loads)-1):
         npz0 = loads[i][2][2]/normalized_unit_axial_length
         npz1 = loads[i+1][2][2]/normalized_unit_axial_length
@@ -134,9 +135,17 @@ def fbd3d(context):
             moment[2][1]/normalized_unit_radial_length,
             moment[2][2]/normalized_unit_axial_length,
         ]
+        if moment[3][0] != 0 or moment[3][1] != 0:
+            raise NotImplementedError("Didn't Implement Drawing Moment in arbitrary Direction.")
+
+        ret3d += r"    \coordinate (MomentOrigin) at ("+f"{np[0]},{np[1]},{np[2]}"+");\n"
+        ret3d += r"    \tdplotsetrotatedcoordsorigin{(MomentOrigin)}"+"\n"
         ret3d += r"    \tdplotsetrotatedcoords{90}{-90}{-90}"+"\n"
-        ret3d += f"    \\tdplotdrawarc[tdplot_rotated_coords,-latex]{{({np[0]},{np[1]},{np[2]})}}{{0.5}}{{0}}{{180}}{{anchor = east}}{{${moment[1]}$}}\n"
-        ret3d += r"    \tdplotsetrotatedcoords{90}{90}{90}"+"\n\n"
+        if moment[3][2] <= 0:
+            ret3d += r"    \tdplotdrawarc[tdplot_rotated_coords,-latex]{(0,0,0)}{0.5}{0}{180}{anchor = east}{$"+f"{moment[1]}"+"$}\n"
+        else:
+            ret3d += r"    \tdplotdrawarc[tdplot_rotated_coords,-latex]{(0,0,0)}{0.5}{180}{0}{anchor = east}{$"+f"{moment[1]}"+"$}\n"
+        ret3d += r"    \tdplotresetrotatedcoordsorigin"+"\n\n"
 
     ret3d += "}\n\n"
 
@@ -147,18 +156,17 @@ def shaft_analysis(context):
     """return the latex code that draws out the internal shear, moment, compression, torsion of the shaft."""
 
     loads = context["load"]
-    loads.sort(key=lambda x: x[1][2])
+    loads.sort(key=lambda x: x[2][2])
     key_points = [(0, (0, 0, 0), (0, 0, 0))]
     for load in loads:
         if load[0] == LoadType.MOMENT:
-            rx, ry, rz = load[1]
-            mxyz = load[2]
+            rx, ry, rz = load[2]
+            mxyz = load[3]
             key_points.append((rz, (0, 0, 0), mxyz))
         else:
-            rx, ry, rz = load[1]
-            fx, fy, fz = load[2]
-            mxyz = load[2]
-            key_points.append((rz, mxyz, (ry*fz, -rx*fz, rx*fy-ry*fx)))
+            rx, ry, rz = load[2]
+            fx, fy, fz = load[3]
+            key_points.append((rz, (fx, fy, fz), (ry*fz, -rx*fz, rx*fy-ry*fx)))
 
     normalized_unit_axial_length = (key_points[-1][0])/10
 
@@ -200,8 +208,8 @@ def shaft_analysis(context):
         rfx_accu = rfx_expr.evalf(subs={S("z"): key_point[0]}) + key_point[1][0]
         rfy_accu = rfy_expr.evalf(subs={S("z"): key_point[0]}) + key_point[1][1]
         rfz_accu = rfz_expr.evalf(subs={S("z"): key_point[0]}) + key_point[1][2]
-        rmx_accu = rmx_expr.evalf(subs={S("z"): key_point[0]}) + key_point[2][1]  # rmx means moment in xz plane which is y in vector notation which is why the y moment load is added
-        rmy_accu = rmy_expr.evalf(subs={S("z"): key_point[0]}) + key_point[2][0]  # rmy means moment in yz plane which is x in vector notation which is why the x moment load is added
+        rmx_accu = rmx_expr.evalf(subs={S("z"): key_point[0]}) - key_point[2][1]  # rmx means moment in xz plane which is y in vector notation which is why the y moment load is added. The negative sign is a quirk as xz is negative y.
+        rmy_accu = rmy_expr.evalf(subs={S("z"): key_point[0]}) + key_point[2][0]  # rmy means moment in yz plane which is x in vector notation which is why the x moment load is added.
         rmz_accu = rmz_expr.evalf(subs={S("z"): key_point[0]}) + key_point[2][2]
 
         beam_segments.append((
@@ -255,19 +263,17 @@ context = {
     },
     "load": [
         # Type, point that the load acts upon, the components of the load.
-        (LoadType.FORCE, "R_O", [0, 0, 0], [S("F_{ox}"), S("F_{oy}"), 0]),
-        (LoadType.FORCE, "P_A", [0.125*cos(radians(45+90)), 0.125*sin(radians(45+90)), 0.3], [0.15*S("F_{AT}")*cos(radians(45)), 0.15*S("F_{AT}")*sin(radians(45)), 0]),
-        (LoadType.FORCE, "P_B", [0.125*cos(radians(45-90)), 0.125*sin(radians(45-90)), 0.3], [S("F_{AT}")*cos(radians(45)), S("F_{AT}")*sin(radians(45)), 0]),
-        (LoadType.FORCE, "P_C", [0, 0.15, 0.7], [-50, 0, 0]),
-        (LoadType.FORCE, "P_D", [0, -0.15, 0.7], [-270, 0, 0]),
-        (LoadType.FORCE, "R_E", [0, 0, 0.85], [S("F_{ex}"), S("F_{ey}"), 0]),
+        (LoadType.FORCE, "R_A", [0, 0, 0], [S("F_{Ax}"), S("F_{Ay}"), 0]),
+        (LoadType.FORCE, "F_G", [3.75, 0, 3.5], [-58, 500, 173]),
+        (LoadType.FORCE, "R_C", [0, 0, 7], [S("F_{Cx}"), S("F_{Cy}"), S("F_{Cz}")]),
+        (LoadType.MOMENT, "M_C", [0, 0, 7], [0, 0, S("M_{Cz}")]),
     ]
 }
 
 logs = []
 logs.append(solve_reaction_force(context))
 logs.append(fbd3d(context))
-# ret += shaft_analysis(context)
+logs.append(shaft_analysis(context))
 
 with open(join("latex_output", "solution.tex"), "w+") as fi:
     fi.write("\n\n".join(logs))
