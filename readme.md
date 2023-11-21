@@ -32,6 +32,9 @@ If there is an issue DURING EXAM:
 Good Luck in MECH 325.
 
 # For those who want to help
+General:
+- [ ] Refactor code to deal with iteration more effectively.
+
 DX:
 - [ ] Refactor code out of the 1700 line file.
 
@@ -63,7 +66,7 @@ Features:
 | SHAFT AND KEY     | Force Balance                 |  x            |  x            |               |
 | SHAFT AND KEY     | Visualization                 |  x            |  x            |               |
 | SHAFT AND KEY     | Call other Component          |               |               |               |
-| SHAFT AND KEY     | Stress analysis               |               |               |               |
+| SHAFT AND KEY     | Stress analysis               | x             |               |               |
 | SHAFT AND KEY     | Diameter Selection            |               |               |               |
 | POWER SCREW       |                               |               |               |               |
 | BALL SCREW        |                               |               |               |               |
