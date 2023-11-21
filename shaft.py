@@ -107,7 +107,7 @@ def fbd3d(context):
             continue
         ret3d += f"    \draw(0,-0.1,{npz0})--(0,-1.7,{npz0});\n"
         ret3d += f"    \draw(0,-0.1,{npz1})--(0,-1.7,{npz1});\n"
-        ret3d += f"    \draw[latex-latex](0,-1.5,{npz0})--(0,-1.5,{npz1}) node[pos=0.5,below] {{{round_nsig(loads[i+1][2][2]-loads[i][2][2],3)}}};\n\n"
+        ret3d += f"    \draw[latex-latex](0,-1.5,{npz0})--(0,-1.5,{npz1}) node[pos=0.5,below] {{{round_nsig(loads[i+1][2][2]-loads[i][2][2],5)}}};\n\n"
 
     for force in forces:
         nf = [x/normalized_unit_force for x in force[3]]
@@ -119,10 +119,10 @@ def fbd3d(context):
 
         # the indicator lines
         if np[1] != 0:
-            ret3d += f"    \draw[marking]({np[0]},{np[1]},{np[2]})--({np[0]},0,{np[2]}) node[pos=.5 ,below, sloped]{{{round_nsig(force[2][1],3)}}};\n"
+            ret3d += f"    \draw[marking]({np[0]},{np[1]},{np[2]})--({np[0]},0,{np[2]}) node[pos=.5 ,below, sloped]{{{round_nsig(force[2][1],5)}}};\n"
 
         if np[0] != 0:
-            ret3d += f"    \draw[marking]({np[0]},0,{np[2]})--(0,0,{np[2]}) node[pos=.5 ,below, sloped]{{{round_nsig(force[2][0],3)}}};\n"
+            ret3d += f"    \draw[marking]({np[0]},0,{np[2]})--(0,0,{np[2]}) node[pos=.5 ,below, sloped]{{{round_nsig(force[2][0],5)}}};\n"
 
         # the components.
         ret3d += f"    \draw[forces,-latex]({-nf[0]+np[0]},{-nf[1]+np[1]},{-nf[2]+np[2]})--({np[0]},{np[1]},{np[2]}) node[pos=0, left]{{${force[1]}$}};\n"
@@ -188,6 +188,8 @@ def shaft_analysis(context):
         r"""    \draw[axis,-latex](-2,0)--(-2,1)node[above right]{$M_{yz}$};""",
         r"""    \draw[axis,-latex](-2,0)--(-2,1)node[above right]{$T$};""",
         r"""    \draw[axis,-latex](-2,0)--(-2,1)node[above right]{Axial Compression};""",
+        r"""    \draw[axis,-latex](-2,0)--(-2,1)node[above right]{$|V|$};""",
+        r"""    \draw[axis,-latex](-2,0)--(-2,1)node[above right]{$|M|$};""",
     ]
     ]
 
@@ -242,13 +244,49 @@ def shaft_analysis(context):
                 z = (next_point[0]-this_point[0])*(k)/20+this_point[0]
                 v = next_point[1][i].evalf(subs={S("z"): z})
                 if (k == 0 or k == 20) and abs(v-last_tag) >= 0.01*normalized_unit[i]:
-                    ret2d[graph_i] += f"--({z/normalized_unit_axial_length},{v/normalized_unit[i]}) node[above right] {{{round_nsig(v,3):5.0f}}} "
+                    ret2d[graph_i] += f"--({z/normalized_unit_axial_length},{v/normalized_unit[i]}) node[above right] {{{round_nsig(v,5):5.0f}}} "
                     last_tag = v
                 else:
                     ret2d[graph_i] += f"--({z/normalized_unit_axial_length},{v/normalized_unit[i]}) "
 
         ret2d[graph_i] += f"--(10,{beam_segments[-1][2][i]/normalized_unit[i]});\n"
         ret2d[graph_i] += r"\end{tikzpicture}"+"\n"
+
+    ret2d[6] += r"\draw[plot](0,0)"
+    normalized_unit_shear = sqrt(normalized_unit[0]**2+normalized_unit[1]**2)
+    for j in range(len(beam_segments)-1):
+        this_point = beam_segments[j]
+        next_point = beam_segments[j+1]
+        for k in range(21):
+            z = (next_point[0]-this_point[0])*(k)/20+this_point[0]
+            v = sqrt((next_point[1][0].evalf(subs={S("z"): z}))**2+(next_point[1][1].evalf(subs={S("z"): z}))**2)
+            if (k == 0 or k == 20) and abs(v-last_tag) >= 0.01*normalized_unit[i]:
+                ret2d[6] += f"--({z/normalized_unit_axial_length},{v/normalized_unit_shear}) node[above right] {{{round_nsig(v,5):5.0f}}} "
+                last_tag = v
+            else:
+                ret2d[6] += f"--({z/normalized_unit_axial_length},{v/normalized_unit_shear}) "
+
+    v = sqrt((beam_segments[-1][2][0].evalf(subs={S("z"): z}))**2+(beam_segments[-1][2][1].evalf(subs={S("z"): z}))**2)
+    ret2d[6] += f"--(10,{v/normalized_unit[i]});\n"
+    ret2d[6] += r"\end{tikzpicture}"+"\n"
+
+    ret2d[7] += r"\draw[plot](0,0)"
+    normalized_unit_shear = sqrt(normalized_unit[3]**2+normalized_unit[4]**2)
+    for j in range(len(beam_segments)-1):
+        this_point = beam_segments[j]
+        next_point = beam_segments[j+1]
+        for k in range(21):
+            z = (next_point[0]-this_point[0])*(k)/20+this_point[0]
+            v = sqrt((next_point[1][3].evalf(subs={S("z"): z}))**2+(next_point[1][4].evalf(subs={S("z"): z}))**2)
+            if (k == 0 or k == 20) and abs(v-last_tag) >= 0.01*normalized_unit[i]:
+                ret2d[7] += f"--({z/normalized_unit_axial_length},{v/normalized_unit_shear}) node[above right] {{{round_nsig(v,5):5.0f}}} "
+                last_tag = v
+            else:
+                ret2d[7] += f"--({z/normalized_unit_axial_length},{v/normalized_unit_shear}) "
+
+    v = sqrt((beam_segments[-1][2][3].evalf(subs={S("z"): z}))**2+(beam_segments[-1][2][4].evalf(subs={S("z"): z}))**2)
+    ret2d[7] += f"--(10,{v/normalized_unit[i]});\n"
+    ret2d[7] += r"\end{tikzpicture}"+"\n"
 
     ret2d = "\n".join(ret2d)
 
