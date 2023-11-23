@@ -2,7 +2,7 @@ from infrastructure import *
 
 # home work question
 input_context = {
-    "question_type": QuestionType.CHAIN,
+    "question_type": ComponentType.CHAIN,
     "vars": {
         # text description []
         "driven": "Centrifugal Pump",
@@ -28,7 +28,7 @@ input_context = {
 
 # 2021 test 1
 input_context = {
-    "question_type": QuestionType.CHAIN,
+    "question_type": ComponentType.CHAIN,
     "vars": {
         # text description []
         "driver": "Electric Motor",

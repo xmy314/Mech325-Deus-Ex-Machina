@@ -30,7 +30,7 @@ def touch(e): return e.xreplace(ir(e))
 
 
 # list of different types of questions and their current state
-class QuestionType(Enum):
+class ComponentType(Enum):
     FLAT_BELT = 1                               # TODO need to compute developed friction and minimum operating stress.
     V_BELT = 2                                  # Done
     SYNCHRONOUS_BELT = 3                        # Done
@@ -74,35 +74,6 @@ def retrieve_flatbelt_information():
     print("Retrieving information for solving flat belt questions from Shigley.")
     print("Please note that it only solves upper operation limit due to stress but not lower operation limit from friction.")
 
-    # type, name, (output,input)
-    tables = [
-        (PathType.TABLE_OR_FIGURE, "Shigley Table 17-2", [[S("t"), S("D_{in\\,min}"), S("F_a"), S("\\gamma"), S("f")], ["belt"]]),
-        (PathType.TABLE_OR_FIGURE, "Shigley Table 17-4", [[S("C_p")], ["belt", S("D_{in}")]]),
-    ]
-
-    eqns = [
-        # geometry
-        (PathType.EQUATION, "Shigley Equation pg 887",         Geqn(S("V"),            S("n_{in}")*S("D_{in}")*sym.pi/12)),
-        (PathType.EQUATION, "General Equation VR",             Geqn(S("VR"),           S("D_{out}")/S("D_{in}"))),
-        (PathType.EQUATION, "General Equation VR",             Geqn(S("VR"),           S("n_{in}")/S("n_{out}"))),
-        (PathType.EQUATION, "Shigley Equation 17-1",           Geqn(S("\\phi_{in}"),   sym.pi-2*sym.asin((S("D_{out}")-S("D_{in}"))/S("CD")))),
-        (PathType.EQUATION, "Shigley Equation 17-1",           Geqn(S("\\phi_{out}"),  sym.pi+2*sym.asin((S("D_{out}")-S("D_{in}"))/S("CD")))),
-        (PathType.EQUATION, "Shigley Equation 17-2",           Geqn(S("L"),            (4*S("CD")**2 - (S("D_{out}") - S("D_{in}"))**2)**(1/2) + (S("D_{in}")*S("\\phi_{in}")+S("D_{out}")*S("\\phi_{out}"))/2)),
-        (PathType.EQUATION, "Shigley Equation 17-13",          Geqn(S("dip"),          S("CD")**2*S("w")/(96*S("F_i")))),
-
-        # forces
-        (PathType.EQUATION, "Shigley Equation pg 893",         Geqn(S("H_d"),          S("H_{nom}") * S("K_s") * S("n_d"))),
-        (PathType.EQUATION, "Shigley Equation pg 892",         Geqn(S("T_{in}"),       63025*S("H_d")/S("n_{in}"))),
-        (PathType.EQUATION, "General Equation m per l",        Geqn(S("w"),            12*S("\\gamma")*S("b")*S("t"))),
-        (PathType.EQUATION, "Shigley Equation 17-2 (e)",       Geqn(S("F_c"),          (S("V")/60)**2*(S("w")/32.17))),
-        (PathType.EQUATION, "Shigley Equation 17-12",          Geqn(S("F_{1a}"),       S("b") * S("F_a") * S("C_p")*S("C_v"))),
-        (PathType.EQUATION, "Shigley Equation 17-2 (h)",       Geqn(S("F_2"),          S("F_{1a}") - 2*S("T_{in}")/S("D_{in}"))),
-        (PathType.EQUATION, "Shigley Equation 17-2 (i)",       Geqn(S("F_i"),          (S("F_{1a}") + S("F_2"))/2-S("F_c"))),
-        (PathType.EQUATION, "Shigley Equation 17-2 (j)",       Geqn(S("H_a"),          (S("\\Delta F")*S("V"))/33000)),
-        (PathType.EQUATION, "General Equation F1-F2",          Geqn(S("\\Delta F"),    S("F_{1a}")-S("F_2"))),
-        (PathType.EQUATION, "General Equation safety factor",  Geqn(S("n_{sf}"),       S("H_a")/S("H_d"))),
-    ]
-
     def compute_cv(knowns):
         # return path to follow if ready, else return what is needed.
         if not "leather" in knowns["belt"]:
@@ -110,118 +81,119 @@ def retrieve_flatbelt_information():
         else:
             return [(PathType.TABLE_OR_FIGURE, "Shigley Figure 17-9", [[S("C_v")], [S("V")]])]
 
-    # due to structure issues, please don't nest conditional types.
-    # maybe if everything is refactored into a oop stype, then it would be possible.
-    conds = [
-        (PathType.CUSTOM, "Shigley Text pg 891", [[S("C_v")], ["belt", S("V")]], compute_cv)
+    # type, name, (output,input)
+    pathways = [
+        # Component Property
+        (PathType.TABLE_OR_FIGURE, "Shigley Table 17-2", [[S("t"), S("D_{in\\,min}"), S("F_a"), S("\\gamma"), S("f")], ["belt"]]),
+        (PathType.EQUATION, "General Equation lbf/ft",                  Geqn(S("w"),            12*S("\\gamma")*S("b")*S("t"))),  # weight per length [lbs/feet]
+
+        # Tangential Speed and Input Output Ratio
+        (PathType.EQUATION, "Shigley Equation pg 887",         Geqn(S("V"),            S("n_{in}")*S("D_{in}")*sym.pi/12)),
+        (PathType.EQUATION, "General Equation VR",             Geqn(S("VR"),           S("D_{out}")/S("D_{in}"))),
+        (PathType.EQUATION, "General Equation VR",             Geqn(S("VR"),           S("n_{in}")/S("n_{out}"))),
+
+        # Geometry
+        (PathType.EQUATION, "Shigley Equation 17-1",           Geqn(S("\\phi_{in}"),   sym.pi-2*sym.asin((S("D_{out}")-S("D_{in}"))/S("CD")))),
+        (PathType.EQUATION, "Shigley Equation 17-1",           Geqn(S("\\phi_{out}"),  sym.pi+2*sym.asin((S("D_{out}")-S("D_{in}"))/S("CD")))),
+        (PathType.EQUATION, "Shigley Equation 17-2",           Geqn(S("L"),            (4*S("CD")**2 - (S("D_{out}") - S("D_{in}"))**2)**(1/2) + (S("D_{in}")*S("\\phi_{in}")+S("D_{out}")*S("\\phi_{out}"))/2)),
+        (PathType.EQUATION, "Shigley Equation 17-13",          Geqn(S("dip"),          S("CD")**2*S("w")/(96*S("F_i")))),
+
+        # Correction Factors
+        (PathType.TABLE_OR_FIGURE, "Shigley Table 17-4", [[S("C_p")], ["belt", S("D_{in}")]]),  # based on pulley diameter
+        (PathType.CUSTOM, "Shigley Text pg 891", [[S("C_v")], ["belt", S("V")]], compute_cv),  # based on material
+
+        # Torque and Forces
+        (PathType.EQUATION, "Shigley Equation pg 892",                  Geqn(S("T_{in}"),       63025*S("H_{des}")/S("n_{in}"))),  # torque on the input side
+        (PathType.EQUATION, "Shigley Equation section 17-2 (i)",        Geqn(S("F_i"),          (S("F_{1a}") + S("F_2"))/2-S("F_c"))),
+        (PathType.EQUATION, "Shigley Equation section 17-2 (e)",        Geqn(S("F_c"),          (S("V")/60)**2*(S("w")/32.17))),
+        (PathType.EQUATION, "Shigley Equation 17-12",                   Geqn(S("F_{1a}"),       S("b") * S("F_a") * S("C_p")*S("C_v"))),
+        (PathType.EQUATION, "Shigley Equation section 17-2 (h)",        Geqn(S("F_2"),          S("F_{1a}") - 2*S("T_{in}")/S("D_{in}"))),
+        (PathType.EQUATION, "General Equation F1-F2",                   Geqn(S("\\Delta F"),    S("F_{1a}")-S("F_2"))),
+
+        # Power and Selection
+        (PathType.EQUATION, "Shigley Equation section 17-2 (j)",        Geqn(S("H_{all}"),      (S("\\Delta F")*S("V"))/33000)),
+        (PathType.EQUATION, "Shigley Equation pg 893",                  Geqn(S("H_{des}"),      S("H_{nom}") * S("K_s") * S("n_d"))),
+        (PathType.EQUATION, "General Equation safety factor",           Geqn(S("n_{sf}"),       S("H_{all}")/S("H_{des}"))),
     ]
 
-    return tables+eqns+conds
+    return pathways
 
 
 def retrieve_vbelt_information():
     print("Retrieving information for solving vbelt questions from Mott.")
+    print("Please note that it only solves upper operation limit due to stress but not lower operation limit from friction.")
 
-    tables = [
-        (PathType.TABLE_OR_FIGURE, "Mott Table 7-1", [[S("K_s")], ["driven", "driver", "duty time"]]),
-        (PathType.TABLE_OR_FIGURE, "Mott Table 7-2", [[S("L")], [S("L_{rough}")]]),
-    ]
+    def sheave_selection(knowns):
+        logs = []
+        if knowns["belt type"] == "3V" or knowns["belt type"] == "3v":
+            logs += solve_pathway((PathType.TABLE_OR_FIGURE, "Mott Figure 7-14", [[S("D_{in}"), S("D_{out}"), S("H_{tab}")], [S("VR_{rough}"), S("D_{in\\,rough}")]]), knowns)
+        elif knowns["belt type"] == "5V" or knowns["belt type"] == "5v":
+            logs += solve_pathway((PathType.TABLE_OR_FIGURE, "Mott Figure 7-15", [[S("D_{in}"), S("D_{out}"), S("H_{tab}")], [S("VR_{rough}"), S("D_{in\\,rough}")]]), knowns)
+        elif knowns["belt type"] == "8V" or knowns["belt type"] == "8v":
+            logs += solve_pathway((PathType.TABLE_OR_FIGURE, "Mott Figure 7-16", [[S("D_{in}"), S("D_{out}"), S("H_{tab}")], [S("VR_{rough}"), S("D_{in\\,rough}")]]), knowns)
+        else:
+            raise Exception("unacceptable belt type")
+        return logs
 
-    figures = [
-        (PathType.TABLE_OR_FIGURE, "Mott Figure 7-13", [["belt type"], [S("H_{des}"), S("n_{in}")]]),
-        (PathType.TABLE_OR_FIGURE, "Mott Figure 7-18", [[S("C_{\\theta}")], [S("\\theta_{in}")]]),
-        (PathType.TABLE_OR_FIGURE, "Mott Figure 7-19", [[S("C_L")], ["belt type", S("L")]]),
-    ]
+    def extra_power(knowns):
+        logs = []
+        if knowns["belt type"] == "3V" or knowns["belt type"] == "3v":
+            logs += solve_pathway((PathType.TABLE_OR_FIGURE, "Mott Figure 7-14", [[S("H_{ext}")], [S("VR")]]), knowns)
+        elif knowns["belt type"] == "5V" or knowns["belt type"] == "5v":
+            logs += solve_pathway((PathType.TABLE_OR_FIGURE, "Mott Figure 7-17", [[S("H_{ext}")], [S("VR")]]), knowns)
+        elif knowns["belt type"] == "8V" or knowns["belt type"] == "8v":
+            logs += solve_pathway((PathType.TABLE_OR_FIGURE, "Mott Figure 7-16", [[S("H_{ext}")], [S("VR")]]), knowns)
+        else:
+            raise Exception("unacceptable belt type")
+        return logs
 
-    eqns = [
+    pathways = [
+
+        # Tangential Speed and Input Output Ratio
         (PathType.EQUATION, "Mott Equation pg 255",             Geqn(S("V_{rough}"),        S("n_{in}")*S("D_{in\\,rough}")*sym.pi/12)),
         (PathType.EQUATION, "Mott Equation pg 255",             Geqn(S("V"),                S("n_{in}")*S("D_{in}")*sym.pi/12)),
-        (PathType.EQUATION, "General Equation service factor",  Geqn(S("H_{des}"),          S("H_{nom}") * S("K_s"))),
         (PathType.EQUATION, "General Equation VR",              Geqn(S("VR_{rough}"),       S("n_{in}")/S("n_{out\\,rough}"))),
         (PathType.EQUATION, "General Equation VR",              Geqn(S("VR"),               S("D_{out}")/S("D_{in}"))),
         (PathType.EQUATION, "General Equation VR",              Geqn(S("VR"),               S("n_{in}")/S("n_{out}"))),
 
+        # Geometry
         (PathType.EQUATION, "Mott Equation 7-17",               Geqn(S("CD_{rough}"),       2*S("D_{out}")+1.5*S("D_{in}"))),
-        (PathType.EQUATION, "Mott Equation pg 255",             Geqn(S("VR"),               S("n_{in}")/S("n_{out}"))),
         (PathType.EQUATION, "Mott Equation 7-12",               Geqn(S("L_{rough}"),        2*S("CD_{rough}")+1.57*(S("D_{out}")+S("D_{in}"))+(S("D_{out}")-S("D_{in}"))**2/(4*S("CD_{rough}")))),
+        (PathType.TABLE_OR_FIGURE, "Mott Table 7-2",            [[S("L")], [S("L_{rough}")]]),
         (PathType.EQUATION, "Mott Equation 7-13-sub",           Geqn(S("B"),                4*S("L")-2*sym.pi*(S("D_{out}")+S("D_{in}")))),
         (PathType.EQUATION, "Mott Equation 7-13",               Geqn(S("CD"),               (S("B") + sym.sqrt(S("B")**2 - 32*(S("D_{out}") - S("D_{in}"))**2))/16)),
         (PathType.EQUATION, "Mott Equation 7-16",               Geqn(S("d"),                (S("CD")**2-((S("D_{out}")-S("D_{in}"))/2)**2)**0.5)),
         (PathType.EQUATION, "Mott Equation 17-14",              Geqn(S("\\theta_{in}"),     sym.pi-2*sym.asin((S("D_{out}")-S("D_{in}"))/S("CD")))),
         (PathType.EQUATION, "Mott Equation 17-15",              Geqn(S("\\theta_{out}"),    sym.pi+2*sym.asin((S("D_{out}")-S("D_{in}"))/S("CD")))),
 
+        # Correction Factor
+        (PathType.TABLE_OR_FIGURE, "Mott Table 7-1", [[S("K_s")], ["driven", "driver", "duty time"]]),  # overload factor
+        (PathType.TABLE_OR_FIGURE, "Mott Figure 7-18", [[S("C_{\\theta}")], [S("\\theta_{in}")]]),  # angle correction factor
+        (PathType.TABLE_OR_FIGURE, "Mott Figure 7-19", [[S("C_L")], ["belt type", S("L")]]),  # length correction factor
+
+        # Torque and Forces
+        # (PathType.EQUATION, "Shigley Equation pg 892",                  Geqn(S("T_{in}"),       63025*S("H_{des}")/S("n_{in}"))),  # torque on the input side
+        # (PathType.EQUATION, "Shigley Equation section 17-2 (i)",        Geqn(S("F_i"),          (S("F_{1a}") + S("F_2"))/2-S("F_c"))),
+        # (PathType.EQUATION, "Shigley Equation section 17-2 (e)",        Geqn(S("F_c"),          (S("V")/60)**2*(S("w")/32.17))),
+        # (PathType.EQUATION, "Shigley Equation 17-12",                   Geqn(S("F_{1a}"),       S("b") * S("F_a") * S("C_p")*S("C_v"))),
+        # (PathType.EQUATION, "Shigley Equation section 17-2 (h)",        Geqn(S("F_2"),          S("F_{1a}") - 2*S("T_{in}")/S("D_{in}"))),
+        # (PathType.EQUATION, "General Equation F1-F2",                   Geqn(S("\\Delta F"),    S("F_{1a}")-S("F_2"))),
+
+        # Power and Selection
+        (PathType.TABLE_OR_FIGURE, "Mott Figure 7-13",          [["belt type"], [S("H_{des}"), S("n_{in}")]]),
+        (PathType.EQUATION, "General Equation service factor",  Geqn(S("H_{des}"),          S("H_{nom}") * S("K_s"))),
         (PathType.EQUATION, "Mott Equation pg 262",             Geqn(S("H_{all}"),          S("C_{\\theta}")*S("C_L")*(S("H_{tab}")+S("H_{ext}")))),
+        (PathType.CUSTOM, "Mott Text pg 257",                   [[S("H_{ext}")], ["belt type", S("VR")]], extra_power),
         (PathType.EQUATION, "Mott Equation pg 262",             Geqn(S("N_{belt}"),         sym.ceiling(S("H_{des}")/S("H_{all}")))),
+        (PathType.CUSTOM, "Mott Text pg 257", [[S("D_{in}"), S("D_{out}"), S("H_{tab}")], ["belt type", S("VR_{rough}"), S("D_{in\\,rough}")]], sheave_selection),
         (PathType.EQUATION, "General Equation safety factor",   Geqn(S("n_{sf}"),           S("H_{des}")/(S("N_{belt}")*S("H_{all}")))),
     ]
 
-    def sheave_selection(knowns):
-        logs = []
-        if "3" in knowns["belt type"]:
-            logs += solve_pathway((PathType.TABLE_OR_FIGURE, "Mott Figure 7-14", [[S("D_{in}"), S("D_{out}"), S("H_{tab}")], [S("VR_{rough}"), S("D_{in\\,rough}")]]), knowns)
-            return logs
-        elif "5" in knowns["belt type"]:
-            logs += solve_pathway((PathType.TABLE_OR_FIGURE, "Mott Figure 7-15", [[S("D_{in}"), S("D_{out}"), S("H_{tab}")], [S("VR_{rough}"), S("D_{in\\,rough}")]]), knowns)
-            return logs
-        elif "8" in knowns["belt type"]:
-            logs += solve_pathway((PathType.TABLE_OR_FIGURE, "Mott Figure 7-16", [[S("D_{in}"), S("D_{out}"), S("H_{tab}")], [S("VR_{rough}"), S("D_{in\\,rough}")]]), knowns)
-            return logs
-        else:
-            raise Exception("unacceptable belt type")
-
-    def extra_power(knowns):
-        logs = []
-        if "3" in knowns["belt type"]:
-            logs += solve_pathway((PathType.TABLE_OR_FIGURE, "Mott Figure 7-14", [[S("H_{ext}")], [S("VR")]]), knowns)
-            return logs
-        elif "5" in knowns["belt type"]:
-            logs += solve_pathway((PathType.TABLE_OR_FIGURE, "Mott Figure 7-17", [[S("H_{ext}")], [S("VR")]]), knowns)
-            return logs
-        elif "8" in knowns["belt type"]:
-            logs += solve_pathway((PathType.TABLE_OR_FIGURE, "Mott Figure 7-16", [[S("H_{ext}")], [S("VR")]]), knowns)
-            return logs
-        else:
-            raise Exception("unacceptable belt type")
-
-    # due to structure issues, please don't nest conditional types.
-    # maybe if everything is refactored into a oop stype, then it would be possible.
-    conds = [
-        (PathType.CUSTOM, "Mott Text pg 257", [[S("D_{in}"), S("D_{out}"), S("H_{tab}")], ["belt type", S("VR_{rough}"), S("D_{in\\,rough}")]], sheave_selection),
-        (PathType.CUSTOM, "Mott Text pg 257", [[S("H_{ext}")], ["belt type", S("VR")]], extra_power),
-    ]
-
-    return tables+figures+eqns+conds
+    return pathways
 
 
 def retrieve_syncbelt_information():
     print("Retrieving information for solving syncronous belt questions from Mott.")
-    tables = [
-        (PathType.TABLE_OR_FIGURE, "Mott Table 7-8",  [[S("K_s")], ["driven", "driver", "duty time"]]),
-        (PathType.TABLE_OR_FIGURE, "Mott Table 7-5",  [["minimum input bushing size", "maximum input bushing size"], ["input shaft diameter"]]),
-        (PathType.TABLE_OR_FIGURE, "Mott Table 7-5",  [["minimum output bushing size", "maximum output bushing size"], ["output shaft diameter"]]),
-        (PathType.TABLE_OR_FIGURE, "Mott Table 7-4",  [[S("N_{in\\,min}"), S("N_{in\\,max}")], ["minimum input bushing size", "maximum input bushing size", "maximum input flange size"]]),
-        (PathType.TABLE_OR_FIGURE, "Mott Table 7-4",  [[S("N_{out\\,min}"), S("N_{out\\,max}")], ["minimum output bushing size", "maximum output bushing size", "maximum output flange size"]]),
-        (PathType.TABLE_OR_FIGURE, "Mott Table 7-4",  [["input bushing size"], [S("N_{in}"), S("W")]]),
-        (PathType.TABLE_OR_FIGURE, "Mott Table 7-4",  [["output bushing size"], [S("N_{out}"), S("W")]]),
-        (PathType.TABLE_OR_FIGURE, "Mott Table 7-7",  [[S("N_{in}"), S("N_{out}"), S("CD"), "belt number"], [S("VR_{rough}"), S("N_{in\\,min}"), S("N_{in\\,max}"), S("N_{out\\,min}"), S("N_{out\\,max}"), S("CD_{nom}")]]),
-        (PathType.TABLE_OR_FIGURE, "Mott Table 7-9",  [[S("H_{tab\\,30}")], [S("N_{in}"), S("n_{in}")]]),
-        (PathType.TABLE_OR_FIGURE, "Mott Table 7-10", [[S("H_{tab\\,50}")], [S("N_{in}"), S("n_{in}")]]),
-        (PathType.TABLE_OR_FIGURE, "Mott Table 7-11", [[S("C_L")], ["belt number"]]),
-    ]
-
-    figures = [
-        (PathType.TABLE_OR_FIGURE, "Mott Figure 7-27", [["pitch"], [S("n_{in}"), S("H_{des}")]]),
-    ]
-
-    eqns = [
-        (PathType.EQUATION, "General Equation service factor",  Geqn(S("H_{des}"),          S("H_{nom}") * S("K_s"))),
-        (PathType.EQUATION, "General Equation VR",              Geqn(S("VR_{rough}"),       S("n_{in}")/S("n_{out\\,rough}"))),
-        (PathType.EQUATION, "General Equation VR",              Geqn(S("VR"),               S("N_{out}")/S("N_{in}"))),
-        (PathType.EQUATION, "General Equation VR",              Geqn(S("VR"),               S("D_{out}")/S("D_{in}"))),
-        (PathType.EQUATION, "General Equation VR",              Geqn(S("VR"),               S("n_{in}")/S("n_{out}"))),
-
-        (PathType.EQUATION, "Mott Equation pg 272",             Geqn(S("H_{all}"),          S("H_{tab}")*S("C_L"))),
-    ]
 
     def width_selection(knowns):
         logs = []
@@ -229,64 +201,55 @@ def retrieve_syncbelt_information():
         if knowns[S("H_{tab\\,30}")]*knowns[S("C_L")] > knowns[S("H_{des}")]:
             logs += solve_pathway((PathType.EQUATION, "Through comparison", Geqn(S("H_{tab}"), S("H_{tab\\,30}"))), knowns)
             logs += solve_pathway((PathType.EQUATION, "Through comparison", Geqn(S("W"), 30)), knowns)
-            return logs
         elif knowns[S("H_{tab\\,50}")]*knowns[S("C_L")] > knowns[S("H_{des}")]:
             logs += solve_pathway((PathType.EQUATION, "Through comparison ", Geqn(S("H_{tab}"), S("H_{tab\\,50}"))), knowns)
             logs += solve_pathway((PathType.EQUATION, "Through comparison", Geqn(S("W"), 50)), knowns)
-            return logs
         else:
             raise Exception("no_valid_width_table")
+        return logs
 
-    # due to structure issues, please don't nest conditional types.
-    # maybe if everything is refactored into a oop stype, then it would be possible.
-    conds = [
-        (PathType.CUSTOM, "Mott Text pg 275", [[S("H_{tab}"), S("W")], [S("H_{tab\\,30}"), S("H_{tab\\,50}"), S("C_L"), S("H_{des}")]], width_selection)
+    pathways = [
+
+        # Input Output Ratio
+        (PathType.EQUATION, "General Equation VR",              Geqn(S("VR_{rough}"),       S("n_{in}")/S("n_{out\\,rough}"))),
+        (PathType.EQUATION, "General Equation VR",              Geqn(S("VR"),               S("N_{out}")/S("N_{in}"))),
+        (PathType.EQUATION, "General Equation VR",              Geqn(S("VR"),               S("D_{out}")/S("D_{in}"))),
+        (PathType.EQUATION, "General Equation VR",              Geqn(S("VR"),               S("n_{in}")/S("n_{out}"))),
+
+        # Geometry
+        (PathType.TABLE_OR_FIGURE, "Mott Table 7-5",  [["minimum input bushing size", "maximum input bushing size"], ["input shaft diameter"]]),
+        (PathType.TABLE_OR_FIGURE, "Mott Table 7-5",  [["minimum output bushing size", "maximum output bushing size"], ["output shaft diameter"]]),
+        (PathType.TABLE_OR_FIGURE, "Mott Table 7-4",  [[S("N_{in\\,min}"), S("N_{in\\,max}")], ["minimum input bushing size", "maximum input bushing size", "maximum input flange size"]]),
+        (PathType.TABLE_OR_FIGURE, "Mott Table 7-4",  [[S("N_{out\\,min}"), S("N_{out\\,max}")], ["minimum output bushing size", "maximum output bushing size", "maximum output flange size"]]),
+        (PathType.TABLE_OR_FIGURE, "Mott Table 7-4",  [["input bushing size"], [S("N_{in}"), S("W")]]),
+        (PathType.TABLE_OR_FIGURE, "Mott Table 7-4",  [["output bushing size"], [S("N_{out}"), S("W")]]),
+        (PathType.TABLE_OR_FIGURE, "Mott Table 7-7",  [[S("N_{in}"), S("N_{out}"), S("CD"), "belt number"], [S("VR_{rough}"), S("N_{in\\,min}"), S("N_{in\\,max}"), S("N_{out\\,min}"), S("N_{out\\,max}"), S("CD_{nom}")]]),
+
+        # Correction Factors
+        (PathType.TABLE_OR_FIGURE, "Mott Table 7-8",  [[S("K_s")], ["driven", "driver", "duty time"]]),
+        (PathType.TABLE_OR_FIGURE, "Mott Table 7-11", [[S("C_L")], ["belt number"]]),
+
+        # Torque and Forces
+        (PathType.EQUATION, "General Equation Torque",  Geqn(S("T_{in}"),           63025*S("H_{des}")/S("n_{in}"))),
+        (PathType.EQUATION, "General Equation Torque",  Geqn(S("T_{out}"),          63025*S("H_{des}")/S("n_{out}"))),
+        (PathType.EQUATION, "General Equation Torque",  Geqn(S("F"),                2*S("T_{in}")/S("D_{in}"))),
+
+        # Power and Selection
+        (PathType.TABLE_OR_FIGURE, "Mott Table 7-9",    [[S("H_{tab\\,30}")], [S("N_{in}"), S("n_{in}")]]),
+        (PathType.TABLE_OR_FIGURE, "Mott Table 7-10",   [[S("H_{tab\\,50}")], [S("N_{in}"), S("n_{in}")]]),
+        (PathType.EQUATION, "General Equation service factor",  Geqn(S("H_{des}"),          S("H_{nom}") * S("K_s"))),
+        (PathType.TABLE_OR_FIGURE, "Mott Figure 7-27",  [["pitch"], [S("n_{in}"), S("H_{des}")]]),
+        (PathType.CUSTOM, "Mott Text pg 275",           [[S("H_{tab}"), S("W")], [S("H_{tab\\,30}"), S("H_{tab\\,50}"), S("C_L"), S("H_{des}")]], width_selection),
+        (PathType.EQUATION, "Mott Equation pg 272",             Geqn(S("H_{all}"),          S("H_{tab}")*S("C_L"))),
+
+        (PathType.EQUATION, "General Equation safety factor",   Geqn(S("n_{sf}"),           S("H_{des}")/S("H_{all}"))),
     ]
 
-    return tables+figures+eqns+conds
+    return pathways
 
 
 def retrieve_chain_information():
     print("Retrieving information for solving chain questions from Mott.")
-    tables = [
-        (PathType.TABLE_OR_FIGURE, "Mott Table 7-17",  [[S("K_s")], ["driven", "driver"]]),
-        (PathType.TABLE_OR_FIGURE, "Mott Table 7-14",  [[S("N_{in\\,40}"), S("N_{chain\\,40}"), S("H_{tab\\,40}"), "lubrication type for 40"], [S("n_{in}"), S("H_{des\\,1}"), S("H_{des\\,2}"), S("H_{des\\,3}"), S("H_{des\\,4}")]]),
-        (PathType.TABLE_OR_FIGURE, "Mott Table 7-15",  [[S("N_{in\\,60}"), S("N_{chain\\,60}"), S("H_{tab\\,60}"), "lubrication type for 60"], [S("n_{in}"), S("H_{des\\,1}"), S("H_{des\\,2}"), S("H_{des\\,3}"), S("H_{des\\,4}")]]),
-        (PathType.TABLE_OR_FIGURE, "Mott Table 7-16",  [[S("N_{in\\,80}"), S("N_{chain\\,80}"), S("H_{tab\\,80}"), "lubrication type for 80"], [S("n_{in}"), S("H_{des\\,1}"), S("H_{des\\,2}"), S("H_{des\\,3}"), S("H_{des\\,4}")]]),
-        (PathType.TABLE_OR_FIGURE, "Mott Table 7-12",  [[S("p")], ["chain number"]]),
-    ]
-
-    figures = [
-        (PathType.TABLE_OR_FIGURE, "General Figure round",  [[S("N_{out}")], [S("N_{out\\,rough}")]]),
-        (PathType.TABLE_OR_FIGURE, "General Figure round",  [[S("L_{C}")], [S("L_{C\\,rough}")]]),
-        (PathType.TABLE_OR_FIGURE, "Mott Figure 7-text-pg-281",  [[S("K_{strand}")], [S("N_{chain}")]]),
-    ]
-
-    eqns = [
-        (PathType.EQUATION, "General Equation service factor",  Geqn(S("H_{des}"),          S("H_{nom}") * S("K_s"))),
-        (PathType.EQUATION, "General Equation service factor",  Geqn(S("H_{des\\,1}"),      S("H_{des}"))),
-        (PathType.EQUATION, "General Equation service factor",  Geqn(S("H_{des\\,2}"),      S("H_{des}")/1.7)),
-        (PathType.EQUATION, "General Equation service factor",  Geqn(S("H_{des\\,3}"),      S("H_{des}")/2.5)),
-        (PathType.EQUATION, "General Equation service factor",  Geqn(S("H_{des\\,4}"),      S("H_{des}")/3.3)),
-        (PathType.EQUATION, "General Equation VR",              Geqn(S("VR_{rough}"),       S("n_{in}")/S("n_{out\\,rough}"))),
-        (PathType.EQUATION, "General Equation VR",              Geqn(S("VR_{rough}"),       S("N_{out\\,rough}")/S("N_{in}"))),
-        (PathType.EQUATION, "General Equation VR",              Geqn(S("VR"),               S("n_{in}")/S("n_{out}"))),
-        (PathType.EQUATION, "General Equation VR",              Geqn(S("VR"),               S("N_{out}")/S("N_{in}"))),
-
-        (PathType.EQUATION, "Mott Equation not sure",           Geqn(S("CD_{C\\,rough}"),   S("CD_{rough}")/S("p"))),
-        (PathType.EQUATION, "Mott Equation 7-18",               Geqn(S("L_{C\\,rough}"),    2*S("CD_{C\\,rough}")+(S("N_{out}")+S("N_{in}"))/2+(S("N_{out}")-S("N_{in}"))**2/(4*sym.pi**2*S("CD_{C\\,rough}")))),
-        (PathType.EQUATION, "Mott Equation 7-19-sub",           Geqn(S("B_{C}"),            S("L_{C}")-(S("N_{out}")+S("N_{in}"))/2)),
-        (PathType.EQUATION, "Mott Equation 7-19",               Geqn(S("CD_{C}"),           0.25*(S("B_{C}") + sym.sqrt(S("B_{C}")**2 - 2*(S("N_{out}") - S("N_{in}"))**2/sym.pi**2)))),
-        (PathType.EQUATION, "Mott Equation 7-19",               Geqn(S("CD"),               S("CD_{C}")*S("p"))),
-
-        (PathType.EQUATION, "Mott Equation 17-20",              Geqn(S("PD_{in}"),          S("p")/sym.sin(sym.pi/S("N_{in}")))),
-        (PathType.EQUATION, "Mott Equation 17-20",              Geqn(S("PD_{out}"),         S("p")/sym.sin(sym.pi/S("N_{out}")))),
-        (PathType.EQUATION, "Mott Equation 17-21",              Geqn(S("\\theta_{in}"),     sym.pi-2*sym.asin((S("PD_{out}")-S("PD_{in}"))/S("CD")))),
-        (PathType.EQUATION, "Mott Equation 17-22",              Geqn(S("\\theta_{out}"),    sym.pi+2*sym.asin((S("PD_{out}")-S("PD_{in}"))/S("CD")))),
-
-        (PathType.EQUATION, "Mott Equation strand correction",  Geqn(S("H_{all}"),          S("K_{strand}")*S("H_{tab}"))),
-        (PathType.EQUATION, "General Equation safety factor",   Geqn(S("n_{sf}"),           S("H_{all}")/S("H_{des}"))),
-    ]
 
     def ChooseChain(knowns):
         logs = []
@@ -311,9 +274,39 @@ def retrieve_chain_information():
                 logs.append(f"since the lubrication type for {check[1]} is {knowns['lubrication type']}, and this is the smallest chain, {check[1]} is chosen")
                 return logs
 
-    # due to structure issues, please don't nest conditional types.
-    # maybe if everything is refactored into a oop stype, then it would be possible.
-    conds = [
+    pathways = [
+        # Tangential Speed and Input Output Ratio
+        (PathType.EQUATION, "General Equation VR",              Geqn(S("VR_{rough}"),       S("n_{in}")/S("n_{out\\,rough}"))),
+        (PathType.EQUATION, "General Equation VR",              Geqn(S("VR"),               S("n_{in}")/S("n_{out}"))),
+        (PathType.EQUATION, "General Equation VR",              Geqn(S("VR_{rough}"),       S("N_{out\\,rough}")/S("N_{in}"))),
+        (PathType.EQUATION, "General Equation VR",              Geqn(S("VR"),               S("N_{out}")/S("N_{in}"))),
+
+        # Geometry
+        (PathType.EQUATION, "Pitch definition",                 Geqn(S("CD_{C\\,rough}"),   S("CD_{rough}")/S("p"))),
+        (PathType.EQUATION, "Pitch definition",                 Geqn(S("CD"),               S("CD_{C}")*S("p"))),
+        (PathType.EQUATION, "Mott Equation 7-18",               Geqn(S("L_{C\\,rough}"),    2*S("CD_{C\\,rough}")+(S("N_{out}")+S("N_{in}"))/2+(S("N_{out}")-S("N_{in}"))**2/(4*sym.pi**2*S("CD_{C\\,rough}")))),
+        (PathType.EQUATION, "Mott Equation 7-19",               Geqn(S("CD_{C}"),           0.25*((S("L_{C}")-(S("N_{out}")+S("N_{in}"))/2) + sym.sqrt((S("L_{C}")-(S("N_{out}")+S("N_{in}"))/2)**2 - 2*(S("N_{out}") - S("N_{in}"))**2/sym.pi**2)))),
+        (PathType.TABLE_OR_FIGURE, "General Figure round",      [[S("N_{out}")], [S("N_{out\\,rough}")]]),
+        (PathType.TABLE_OR_FIGURE, "General Figure round",      [[S("L_{C}")], [S("L_{C\\,rough}")]]),
+        # The following commented out line are alternative equations to the one above but uses more name space.
+        # (PathType.EQUATION, "Mott Equation 7-19-sub",           Geqn(S("B_{C}"),            S("L_{C}")-(S("N_{out}")+S("N_{in}"))/2)),
+        # (PathType.EQUATION, "Mott Equation 7-19",               Geqn(S("CD_{C}"),           0.25*(S("B_{C}") + sym.sqrt(S("B_{C}")**2 - 2*(S("N_{out}") - S("N_{in}"))**2/sym.pi**2)))),
+        (PathType.TABLE_OR_FIGURE, "Mott Table 7-12",  [[S("p")], ["chain number"]]),
+
+        (PathType.EQUATION, "Mott Equation 17-20",              Geqn(S("D_{in}"),          S("p")/sym.sin(sym.pi/S("N_{in}")))),
+        (PathType.EQUATION, "Mott Equation 17-20",              Geqn(S("D_{out}"),         S("p")/sym.sin(sym.pi/S("N_{out}")))),
+        (PathType.EQUATION, "Mott Equation 17-21",              Geqn(S("\\theta_{in}"),     sym.pi-2*sym.asin((S("D_{out}")-S("D_{in}"))/S("CD")))),
+        (PathType.EQUATION, "Mott Equation 17-22",              Geqn(S("\\theta_{out}"),    sym.pi+2*sym.asin((S("D_{out}")-S("D_{in}"))/S("CD")))),
+
+        # Selection
+        (PathType.EQUATION, "1 Chain Design Power",  Geqn(S("H_{des\\,1}"),      S("H_{des}"))),
+        (PathType.EQUATION, "2 Chain Design Power",  Geqn(S("H_{des\\,2}"),      S("H_{des}")/1.7)),
+        (PathType.EQUATION, "3 Chain Design Power",  Geqn(S("H_{des\\,3}"),      S("H_{des}")/2.5)),
+        (PathType.EQUATION, "4 Chain Design Power",  Geqn(S("H_{des\\,4}"),      S("H_{des}")/3.3)),
+        (PathType.TABLE_OR_FIGURE, "Mott Table 7-14",  [[S("N_{in\\,40}"), S("N_{chain\\,40}"), S("H_{tab\\,40}"), "lubrication type for 40"], [S("n_{in}"), S("H_{des\\,1}"), S("H_{des\\,2}"), S("H_{des\\,3}"), S("H_{des\\,4}")]]),
+        (PathType.TABLE_OR_FIGURE, "Mott Table 7-15",  [[S("N_{in\\,60}"), S("N_{chain\\,60}"), S("H_{tab\\,60}"), "lubrication type for 60"], [S("n_{in}"), S("H_{des\\,1}"), S("H_{des\\,2}"), S("H_{des\\,3}"), S("H_{des\\,4}")]]),
+        (PathType.TABLE_OR_FIGURE, "Mott Table 7-16",  [[S("N_{in\\,80}"), S("N_{chain\\,80}"), S("H_{tab\\,80}"), "lubrication type for 80"], [S("n_{in}"), S("H_{des\\,1}"), S("H_{des\\,2}"), S("H_{des\\,3}"), S("H_{des\\,4}")]]),
+        # choose with a ton of lookup data.
         (
             PathType.CUSTOM,
             "Mott choose between 40, 60, 80",
@@ -327,10 +320,24 @@ def retrieve_chain_information():
                 ]
             ],
             ChooseChain
-        )
+        ),
+
+        # Power, Torque and Forces
+        (PathType.EQUATION, "General Equation Torque",  Geqn(S("T_{in}"),           63025*S("H_{des}")/S("n_{in}"))),
+        (PathType.EQUATION, "General Equation Torque",  Geqn(S("T_{out}"),          63025*S("H_{des}")/S("n_{out}"))),
+        (PathType.EQUATION, "General Equation Torque",  Geqn(S("F"),                2*S("T_{in}")/S("D_{in}"))),
+
+        # Correction Factors
+        (PathType.TABLE_OR_FIGURE, "Mott Table 7-17",  [[S("K_s")], ["driven", "driver"]]),  # Service Factor
+        (PathType.TABLE_OR_FIGURE, "Mott Figure 7-text-pg-281",  [[S("K_{strand}")], [S("N_{chain}")]]),  # Chain Count Factor
+
+        # Power
+        (PathType.EQUATION, "General Equation service factor",  Geqn(S("H_{des}"),          S("H_{nom}") * S("K_s"))),
+        (PathType.EQUATION, "Mott Equation strand correction",  Geqn(S("H_{all}"),          S("K_{strand}")*S("H_{tab}"))),
+        (PathType.EQUATION, "General Equation safety factor",   Geqn(S("n_{sf}"),           S("H_{all}")/S("H_{des}"))),
     ]
 
-    return tables+figures+eqns+conds
+    return pathways
 
 
 def retrieve_spurgear_information():
@@ -421,20 +428,20 @@ def retrieve_spurgear_information():
         return logs
 
     # Everything is here is collected from the book through a completely manual process.
-
     pathways = [
-        # get design power
+        # Correction Factor
         (PathType.TABLE_OR_FIGURE, "Mott Table 9-1", [[S("K_o")], ["driven", "driver"]]),
         (PathType.EQUATION, "General Equation service factor",  Geqn(S("H_{des}"),      S("H_{nom}") * S("K_o"))),
 
-        # get diametrical pitch
+        # Select diametrical pitch
         (PathType.TABLE_OR_FIGURE, "Mott Figure 9-11",  [[S("P_d")], [S("n_{in}"), S("H_{des}")]]),
 
-        # generic get gear tooth counts
+        # Tangential Speed and Input Output Ratio
         (PathType.EQUATION, "General Equation VR",              Geqn(S("VR_{rough}"),       S("n_{in}")/S("n_{out\\,rough}"))),
         (PathType.EQUATION, "General Equation VR",              Geqn(S("VR"),               S("n_{in}")/S("n_{out}"))),
         (PathType.EQUATION, "General Equation VR",              Geqn(S("VR"),               S("N_{out}")/S("N_{in}"))),
-        (PathType.CUSTOM, "Brute Force Gear Combination",  [["N_{in}", "N_{out}", "N_{VR}"], [S("N_{in\\,min}"), S("N_{in\\,max}"), S("VR_{rough}")]], force_gear_combination),
+        (PathType.CUSTOM, "Brute Force Gear Combination",       [["N_{in}", "N_{out}", "N_{VR}"], [S("N_{in\\,min}"), S("N_{in\\,max}"), S("VR_{rough}")]], force_gear_combination),
+        (PathType.EQUATION, "General Equation Pitchline Velocity",      Geqn(S("V"), sym.pi*S("D_{in}")*S("n_{in}")/12)),
 
         # gear geometry
         (PathType.EQUATION, "Mott Equation 8-12",                       Geqn(S("p"), sym.pi/S("P_d"))),
@@ -442,13 +449,12 @@ def retrieve_spurgear_information():
         (PathType.EQUATION, "General Equation Gear Diameter",           Geqn(S("D_{out}"), S("N_{out}")/S("P_d"))),
         (PathType.EQUATION, "Mott Equation page 378",                   Geqn(S("F"), 12/S("P_d"))),
 
-        # force analysis
-        (PathType.EQUATION, "General Equation Pitchline Velocity",      Geqn(S("V"), sym.pi*S("D_{in}")*S("n_{in}")/12)),
+        # Torque and Force
         (PathType.EQUATION, "General Equation Torque input shaft ",     Geqn(S("T_{in}"), 63025*S("H_{nom}")/S("n_{in}"))),
-        (PathType.EQUATION, "General Equation Transmitted Force",       Geqn(S("W_t"), 33000*S("H_{nom}")/S("V"))),
+        (PathType.EQUATION, "General Equation Transmitted Force",       Geqn(S("W_t"), 2*S("T_{in}")/S("D_{in}"))),
         (PathType.EQUATION, "General Equation Radial Force",            Geqn(S("W_r"), S("W_t")*sym.tan(S("\\phi")))),
 
-        # stress analysis
+        # Stress Analysis
         # s
         (PathType.TABLE_OR_FIGURE, "Mott Table 9-2", [[S("K_s")], [S("P_d")]]),
         # v
@@ -462,9 +468,9 @@ def retrieve_spurgear_information():
         # R
         (PathType.TABLE_OR_FIGURE, "Mott Table 9-11", [[S("K_R")], ["Reliability"]]),
         # cycles
-        (PathType.EQUATION, "9-27", Geqn(S("N_{c\\,in}"), 60*S("n_{in}")*S("L"))),
+        (PathType.EQUATION, "9-27", Geqn(S("N_{c\\,in}"), 60*S("n_{in}")*S("L_{hr}"))),
 
-        # - bending stress
+        # - Bending Stress
         # J
         (PathType.CUSTOM, "Mott Figure 9-10", [[S("J_{in}"), S("J_{out}")], [S("N_{in}"), S("N_{out}"), S("\\phi")]], compute_J),
         # B
@@ -477,7 +483,7 @@ def retrieve_spurgear_information():
         # s ab required
         (PathType.EQUATION, "Mott Equation 9-30", Geqn(S("s_{ab\\,min\\,in}"), S("s_{b\\,in}")*S("K_R")/S("Y_{in}"))),
 
-        # - contact stress
+        # - Contact Stress
         # C_p
         (PathType.TABLE_OR_FIGURE, "Mott Table 9-7",  [[S("C_p")], []]),
         # I
@@ -489,10 +495,10 @@ def retrieve_spurgear_information():
         # s ac required
         (PathType.EQUATION, "Mott Equation 9-31", Geqn(S("s_{ac\\,min}"), S("s_c")*S("K_R")/S("Z_{in}"))),
 
-        # material selection
+        # Material Selection
         (PathType.CUSTOM, "Mott Table 9-9", [["SAE", S("s_{ab}"), S("s_{ac}")], [S("s_{ab\\,min\\,in}"), S("s_{ac\\,min}")]], compute_material),
 
-        # safety factors
+        # Safety Factor
         (PathType.EQUATION, "Mott Equation 9-32", Geqn(S("SF_b"), (S("s_{ab}")*S("Y_{in}"))/(S("s_{b\\,in}")*S("K_R")))),
         (PathType.EQUATION, "Mott Equation 9-33", Geqn(S("SF_c"), (S("s_{ac}")*S("Z_{in}"))/(S("s_c")*S("K_R")))),
         (PathType.EQUATION, "General Equation Safety Factor Comparison", Geqn(S("SF_W"), sym.Min(S("SF_b"), S("SF_c")*S("SF_c")))),
@@ -615,13 +621,14 @@ def retrieve_helicalgear_information():
     pathways = [
         # get design power is not necessary as there is no table or figure that can be used to selectct diametrical pitch.
 
-        # generic get gear tooth counts
+        # Tangential Speed and Input Output Ratio
         (PathType.EQUATION, "General Equation VR",              Geqn(S("VR_{rough}"),       S("n_{in}")/S("n_{out\\,rough}"))),
         (PathType.EQUATION, "General Equation VR",              Geqn(S("VR"),               S("n_{in}")/S("n_{out}"))),
         (PathType.EQUATION, "General Equation VR",              Geqn(S("VR"),               S("N_{out}")/S("N_{in}"))),
         (PathType.CUSTOM, "Brute Force Gear Combination",  [["N_{in}", "N_{out}", "N_{VR}"], [S("N_{in\\,min}"), S("N_{in\\,max}"), S("VR_{rough}")]], force_gear_combination),
+        (PathType.EQUATION, "General Equation Pitchline Velocity",      Geqn(S("V"), sym.pi*S("D_{in}")*S("n_{in}")/12)),
 
-        # gear geometry
+        # Geometry
         (PathType.EQUATION, "Mott Equation 8-11",                       Geqn(sym.tan(S("\\phi_n")), sym.tan(S("\\phi_t"))*sym.cos(S("\\psi")))),
         (PathType.EQUATION, "Mott Equation 8-16",                       Geqn(S("P_d"), S("P_{nd}")*sym.cos(S("\\psi")))),
         (PathType.EQUATION, "Mott Equation 8-16",                       Geqn(S("p_t"), sym.pi/S("P_d"))),
@@ -631,15 +638,13 @@ def retrieve_helicalgear_information():
         (PathType.EQUATION, "General Equation Gear Diameter",           Geqn(S("D_{out}"), S("N_{out}")/S("P_d"))),
         (PathType.EQUATION, "Mott page 325",                            Geqn(S("F"), sym.ceiling(2*S("p_x")))),
 
-        # force analysis
-        (PathType.EQUATION, "General Equation Pitchline Velocity",      Geqn(S("V"), sym.pi*S("D_{in}")*S("n_{in}")/12)),
+        # Torque and Force
         (PathType.EQUATION, "General Equation Torque input shaft ",     Geqn(S("T_{in}"), 63025*S("H_{nom}")/S("n_{in}"))),
-        (PathType.EQUATION, "General Equation Transmitted Force",       Geqn(S("W_t"), 33000*S("H_{nom}")/S("V"))),
-
+        (PathType.EQUATION, "General Equation Transmitted Force",       Geqn(S("W_t"), 2*S("T_{in}")/S("D_{in}"))),
         (PathType.EQUATION, "General Equation Radial Force",            Geqn(S("W_r"), S("W_t")*sym.tan(S("\\phi_t")))),
         (PathType.EQUATION, "General Equation Radial Force",            Geqn(S("W_x"), S("W_t")*sym.tan(S("\\psi")))),
 
-        # stress analysis
+        # Stress Analysis
         # o
         (PathType.TABLE_OR_FIGURE, "Mott Table 9-1", [[S("K_o")], ["driven", "driver"]]),
         # s
@@ -655,9 +660,9 @@ def retrieve_helicalgear_information():
         # R
         (PathType.TABLE_OR_FIGURE, "Mott Table 9-11", [[S("K_R")], ["Reliability"]]),
         # cycles
-        (PathType.EQUATION, "9-27", Geqn(S("N_{c\\,in}"), 60*S("n_{in}")*S("L"))),
+        (PathType.EQUATION, "9-27", Geqn(S("N_{c\\,in}"), 60*S("n_{in}")*S("L_{hr}"))),
 
-        # - bending stress
+        # - Bending Stress
         # J
         (PathType.CUSTOM, "Mott Figure 9-10", [[S("J_{in}"), S("J_{out}")], [S("N_{in}"), S("N_{out}"), S("\\psi"), S("\\phi_n")]], compute_J_helical),
         # B
@@ -670,7 +675,7 @@ def retrieve_helicalgear_information():
         # s ab required
         (PathType.EQUATION, "Mott Equation 9-30", Geqn(S("s_{ab\\,min\\,in}"), S("s_{b\\,in}")*S("K_R")/S("Y_{in}"))),
 
-        # - contact stress
+        # - Contact Stress
         # C_p
         (PathType.TABLE_OR_FIGURE, "Mott Table 9-7",  [[S("C_p")], []]),
         # I
@@ -757,13 +762,13 @@ def retrieve_bevelgear_information():
     pathways = [
         # get design power is not necessary as there is no table or figure that can be used to selectct diametrical pitch.
 
-        # generic get gear tooth counts
+        # Input Output Ratio
         (PathType.EQUATION, "General Equation VR",              Geqn(S("VR_{rough}"),       S("n_{in}")/S("n_{out\\,rough}"))),
         (PathType.EQUATION, "General Equation VR",              Geqn(S("VR"),               S("n_{in}")/S("n_{out}"))),
         (PathType.EQUATION, "General Equation VR",              Geqn(S("VR"),               S("N_{out}")/S("N_{in}"))),
         (PathType.EQUATION, "General Equation GR",              Geqn(S("GR"), S("VR"))),
 
-        # gear geometry
+        # Geometry
         (PathType.EQUATION, "General Equation Gear Diameter",           Geqn(S("D_{in}"), S("N_{in}")/S("P_d"))),
         (PathType.EQUATION, "General Equation Gear Diameter",           Geqn(S("D_{out}"), S("N_{out}")/S("P_d"))),
 
@@ -781,21 +786,21 @@ def retrieve_bevelgear_information():
         (PathType.EQUATION, "Mott Equation 10-11", Geqn(S("R_{m\\,in}"), S("D_{in}")/2-S("F")*sym.sin("\\gamma"/2))),
         (PathType.EQUATION, "Mott Equation 10-11:", Geqn(S("R_{m\\,out}"), S("D_{out}")/2-S("F")*sym.sin("\\Gamma"/2))),
 
-        # force analysis
+        # Force Analysis
         (PathType.EQUATION, "General Equation Torque input shaft ",     Geqn(S("T_{in}"), 63025*S("H_{nom}")/S("n_{in}"))),
         (PathType.EQUATION, "General Equation Torque input shaft ",     Geqn(S("T_{out}"), 63025*S("H_{nom}")/S("n_{out}"))),
 
-        (PathType.EQUATION, "Mott Equation 10-10",                      Geqn(S("W_{t\\,force}"), S("T_{in}")/S("R_{m\\,in}"))),
-        (PathType.EQUATION, "Mott Equation 10-10",                      Geqn(S("W_{t\\,force}"), S("T_{out}")/S("R_{m\\,out}"))),
+        (PathType.EQUATION, "Mott Equation 10-10",                      Geqn(S("W_{t\\,in\\,force}"), S("T_{in}")/S("R_{m\\,in}"))),
         (PathType.EQUATION, "Mott Equation 10-12",                      Geqn(S("W_{r\\,in\\,force}"),  S("W_{t\\,force}")*sym.tan(S("\\phi"))*sym.cos("\\gamma"))),
         (PathType.EQUATION, "Mott Equation 10-13",                      Geqn(S("W_{x\\,in\\,force}"),  S("W_{t\\,force}")*sym.tan(S("\\phi"))*sym.sin("\\gamma"))),
+        (PathType.EQUATION, "Mott Equation 10-10",                      Geqn(S("W_{t\\,out\\,force}"), S("T_{out}")/S("R_{m\\,out}"))),
         (PathType.EQUATION, "Mott Equation In Figure 10-8:",            Geqn(S("W_{r\\,out\\,force}"), S("W_{x\\,in\\,force}"))),
         (PathType.EQUATION, "Mott Equation In Figure 10-8:",            Geqn(S("W_{x\\,out\\,force}"), S("W_{r\\,in\\,force}"))),
 
         (PathType.EQUATION, "Mott Equation In Text pg-445",             Geqn(S("W_{t}"), 2*S("T_{in}")/S("D_{in}"))),
         (PathType.EQUATION, "Mott Equation In Text pg-445",             Geqn(S("W_{t}"), 2*S("T_{out}")/S("D_{out}"))),
 
-        # stress analysis
+        # Stress Analysis
         # o
         (PathType.TABLE_OR_FIGURE, "Mott Table 9-1", [[S("K_o")], ["driven", "driver"]]),
         # v
@@ -807,9 +812,9 @@ def retrieve_bevelgear_information():
         # R
         (PathType.TABLE_OR_FIGURE, "Mott Table 9-11", [[S("K_R")], ["Reliability"]]),
         # cycles
-        (PathType.EQUATION, "9-27",                                     Geqn(S("N_{c\\,in}"), 60*S("n_{in}")*S("L"))),
+        (PathType.EQUATION, "9-27",                                     Geqn(S("N_{c\\,in}"), 60*S("n_{in}")*S("L_{hr}"))),
 
-        # - bending stress
+        # - Bending Stress
         # Ks # can be modified
         (PathType.TABLE_OR_FIGURE, "Mott Table 9-2", [[S("K_s")], [S("P_d")]]),
         # J
@@ -822,7 +827,7 @@ def retrieve_bevelgear_information():
         # s ab required
         (PathType.EQUATION, "Mott Equation 10-18",                       Geqn(S("s_{ab\\,min\\,in}"), S("s_{b\\,in}")*S("K_R")/S("K__{L\\,in}"))),
 
-        # - contact stress
+        # - Contact Stress
         # Cp
         (PathType.TABLE_OR_FIGURE, "Mott Table 9-7",  [[S("C_p")], []]),
         # Cs
@@ -891,30 +896,28 @@ def retrieve_wormgeam_information():
     pathways = [
         # get design power is not necessary as there is no table or figure that can be used to selectct diametrical pitch.
 
-        # generic get gear tooth counts
+        # Speed and Input Output Ratio
+        (PathType.EQUATION, "Mott Equation pg 333",             Geqn(sym.tan(S("v_{t\\,in}")), (sym.pi*S("D_{in}")*S("n_{in}")/12))),
+        (PathType.EQUATION, "Mott Equation pg 334",             Geqn(sym.tan(S("v_{t\\,out}")), (sym.pi*S("D_{out}")*S("n_{out}")/12))),
+        (PathType.EQUATION, "Mott Equation 10-24",              Geqn(sym.tan(S("v_s")), S("v_{t\\,out}")/sym.sin(S("\\lambda")))),
+
         (PathType.EQUATION, "General Equation VR",              Geqn(S("VR_{rough}"),       S("n_{in}")/S("n_{out\\,rough}"))),
         (PathType.EQUATION, "General Equation VR",              Geqn(S("VR"),               S("n_{in}")/S("n_{out}"))),
         (PathType.EQUATION, "General Equation VR",              Geqn(S("VR"),               S("N_{out}")/S("N_{in}"))),
         (PathType.EQUATION, "General Equation GR",              Geqn(S("GR"),               S("VR"))),
-        (PathType.EQUATION, "General Equation GR",              Geqn(S("m_G"),               S("VR"))),
+        (PathType.EQUATION, "General Equation GR",              Geqn(S("m_G"),              S("VR"))),
 
-        # gear geometry
+        # Geometry
         (PathType.EQUATION, "Mott Equation 8-20",               Geqn(S("p"), sym.pi*S("D_{out}")/S("N_{out}"))),
         (PathType.EQUATION, "Mott Equation 8-14",               Geqn(S("p_n"), S("p")*sym.cos("lambda"))),
         (PathType.EQUATION, "Mott Equation 8-21",               Geqn(S("P_d"), S("N_{out}")/S("D_{out}"))),
+        (PathType.EQUATION, "Mott Equation 8-23",               Geqn(S("Lead"), S("N_{in}")*S("p"))),
+        (PathType.EQUATION, "Mott Equation 8-23",               Geqn(sym.tan(S("\\lambda")), S("Lead")/(sym.pi*S("D_{in}")))),
+        (PathType.EQUATION, "Mott Equation 8-26",               Geqn(sym.tan(S("\\phi_n")), sym.tan(S("\\phi_t"))*sym.cos(S("\\lambda")))),
 
-        (PathType.EQUATION, "Mott Equation 8-23",               Geqn(S("L"), S("N_{in}")*S("p"))),
-        (PathType.EQUATION, "Mott Equation 8-23",               Geqn(sym.tan(S("\\lambda")), S("L")/(sym.pi*S("D_{in}")))),
+        # Torque and Force
 
-        (PathType.EQUATION, "Mott Equation pg 333",             Geqn(sym.tan(S("v_{t\\,in}")), (sym.pi*S("D_{in}")*S("D_{in}")/12))),
-        (PathType.EQUATION, "Mott Equation pg 334",             Geqn(sym.tan(S("v_{t\\,out}")), (sym.pi*S("D_{out}")*S("D_{out}")/12))),
-
-        (PathType.EQUATION, "Mott Equation 8-11",               Geqn(sym.tan(S("\\phi_n")), sym.tan(S("\\phi_t"))*sym.cos(S("\\lambda")))),
-
-        # force analysis
-        (PathType.EQUATION, "Mott Equation 10-24",              Geqn(sym.tan(S("v_s")), S("v_{t\\,out}")/sym.sin(S("\\lambda")))),
-
-        (PathType.CUSTOM, "Mott Text pg 457",              [[S("\\mu")], [S("v_s")]], compute_friction_coefficient),
+        (PathType.CUSTOM, "Mott Text pg 457",                          [[S("\\mu")], [S("v_s")]], compute_friction_coefficient),
 
         (PathType.EQUATION, "General Equation Torque input shaft",     Geqn(S("T_{in}"), 63025*S("H_{in}")/S("n_{in}"))),
         (PathType.EQUATION, "General Equation Torque input shaft",     Geqn(S("T_{out}"), 63025*S("H_{out}")/S("n_{out}"))),
@@ -925,22 +928,26 @@ def retrieve_wormgeam_information():
                                                                              (sym.cos(S("\\phi_n"))*sym.cos(S("\\lambda"))-S("\\mu")*sym.sin(S("\\lambda")))
                                                                              )),
         (PathType.EQUATION, "Mott Equation 10-31",                      Geqn(S("W_{r\\,out}"), S("W_{t\\,out}") *
-                                                                             (S("\\mu")) /
-                                                                             (sym.cos(S("\\phi_n"))*sym.cos(S("\\lambda"))-S("\\mu")*sym.sin(S("\\lambda")))
-                                                                             )),
-        (PathType.EQUATION, "Mott Equation 10-32",                      Geqn(S("W_f"), S("W_{t\\,out}") *
                                                                              (sym.sin(S("\\phi_n"))) /
                                                                              (sym.cos(S("\\phi_n"))*sym.cos(S("\\lambda"))-S("\\mu")*sym.sin(S("\\lambda")))
                                                                              )),
+        (PathType.EQUATION, "Mott Equation 10-23",                       Geqn(S("W_{t\\,in}"), S("W_{x\\,out}"))),
+        (PathType.EQUATION, "Mott Equation 10-23",                       Geqn(S("W_{x\\,in}"), S("W_{t\\,out}"))),
+        (PathType.EQUATION, "Mott Equation 10-23",                       Geqn(S("W_{r\\,in}"), S("W_{r\\,out}"))),
 
-        (PathType.EQUATION, "Mott Equation 10-33",                      Geqn(S("P_L"), S("v_s") * sym.sin(S("W_f")) / 33000)),
+        (PathType.EQUATION, "Mott Equation 10-32",                      Geqn(S("W_f"), S("W_{t\\,out}") *
+                                                                             (S("\\mu")) /
+                                                                             (sym.cos(S("\\phi_n"))*sym.cos(S("\\lambda"))-S("\\mu")*sym.sin(S("\\lambda")))
+                                                                             )),
 
-        (PathType.EQUATION, "Mott Equation 10-34",                      Geqn(S("H_{out}"), S("H_{in}")-S("P_L"))),
+        # Stress (skipped for no use in the process of selection)
+
+        # Power
+        (PathType.EQUATION, "Mott Equation 10-33",                      Geqn(S("H_{loss}"), S("v_s") * sym.sin(S("W_f")) / 33000)),
+        (PathType.EQUATION, "Mott Equation 10-34",                      Geqn(S("H_{out}"), S("H_{in}")-S("H_{loss}"))),
         (PathType.EQUATION, "Mott Equation 10-35",                      Geqn(S("\\eta"), S("H_{out}")/S("H_{in}"))),
 
-
         # Rated Load
-
         (PathType.TABLE_OR_FIGURE, "Mott Table 10-27",  [[S("C_s")], [S("P_d")]]),
         (PathType.TABLE_OR_FIGURE, "Mott Table 10-28",  [[S("C_m")], [S("m_G")]]),
         (PathType.CUSTOM, "Mott Text pg-461",      [[S("F_e")], [S("F"), S("D_{in}")]], compute_Fe),
@@ -1048,10 +1055,10 @@ def retrieve_bushing_information():
             # 4 operating values and wear from set upper bounds
             sub_pathways = [
                 (PathType.EQUATION, "Shigley Equation 12-42", Geqn(S("P_{peak}"), (4*S("n_d")*S("F"))/(sym.pi*S("D")*S("L")))),
-                (PathType.EQUATION, "Shigley Equation 12-40", Geqn(S("V"), sym.pi*S("D")*S("N")/12)),
-                (PathType.EQUATION, "Shigley Equation 12-41", Geqn(S("PV"), sym.pi*S("n_d")*S("F")*S("N")/(12*S("L")))),
-                (PathType.EQUATION, "Shigley Equation 12-49", Geqn(S("L"), 720*S("f_s")*S("n_d")*S("F")*S("N")/(S("J")*S("\\hbar_{cr}")*(S("T")-S("T_{\\infty}"))))),
-                (PathType.EQUATION, "Shigley Equation 12-43", Geqn(S("w"), (S("K")*S("n_d")*S("F")*S("N")*S("t"))/(3*S("L")))),
+                (PathType.EQUATION, "Shigley Equation 12-40", Geqn(S("V"), sym.pi*S("D")*S("n")/12)),
+                (PathType.EQUATION, "Shigley Equation 12-41", Geqn(S("PV"), sym.pi*S("n_d")*S("F")*S("n")/(12*S("L")))),
+                (PathType.EQUATION, "Shigley Equation 12-49", Geqn(S("L"), 720*S("f_s")*S("n_d")*S("F")*S("n")/(S("J")*S("\\hbar_{cr}")*(S("T")-S("T_{\\infty}"))))),
+                (PathType.EQUATION, "Shigley Equation 12-43", Geqn(S("w"), (S("K")*S("n_d")*S("F")*S("n")*S("t"))/(3*S("L")))),
             ]
 
             knowns[S("D")] = bushing_diameter[0]
@@ -1100,7 +1107,7 @@ def retrieve_bushing_information():
                 [
                     S("D"), S("L")
                 ], [
-                    S("N"), S("F"), S("n_d"), S("t"),                                                                                                   # human input
+                    S("n"), S("F"), S("n_d"), S("t"),                                                                                                   # human input
                     S("P_{max}"), S("V_{max}"), S("PV_{max}"), S("f_s"), S("\\hbar_{cr}"), S("T_{\\infty}"), S("T_{max}"), S("K"), S("w_{max}"),        # operational limits related based on bushing material.
                     S("J")                                                                                                                              # a random constant
                 ]
@@ -1109,10 +1116,10 @@ def retrieve_bushing_information():
         ),
 
         (PathType.EQUATION, "Shigley Equation 12-42", Geqn(S("P_{peak}"), (4*S("n_d")*S("F"))/(sym.pi*S("D")*S("L")))),
-        (PathType.EQUATION, "Shigley Equation 12-40", Geqn(S("V"), sym.pi*S("D")*S("N")/12)),
-        (PathType.EQUATION, "Shigley Equation 12-41", Geqn(S("PV"), sym.pi*S("n_d")*S("F")*S("N")/(12*S("L")))),
-        (PathType.EQUATION, "Shigley Equation 12-49", Geqn(S("L"), 720*S("f_s")*S("n_d")*S("F")*S("N")/(S("J")*S("\\hbar_{cr}")*(S("T")-S("T_{\\infty}"))))),
-        (PathType.EQUATION, "Shigley Equation 12-43", Geqn(S("w"), (S("K")*S("n_d")*S("F")*S("N")*S("t"))/(3*S("L")))),
+        (PathType.EQUATION, "Shigley Equation 12-40", Geqn(S("V"), sym.pi*S("D")*S("n")/12)),
+        (PathType.EQUATION, "Shigley Equation 12-41", Geqn(S("PV"), sym.pi*S("n_d")*S("F")*S("n")/(12*S("L")))),
+        (PathType.EQUATION, "Shigley Equation 12-49", Geqn(S("L"), 720*S("f_s")*S("n_d")*S("F")*S("n")/(S("J")*S("\\hbar_{cr}")*(S("T")-S("T_{\\infty}"))))),
+        (PathType.EQUATION, "Shigley Equation 12-43", Geqn(S("w"), (S("K")*S("n_d")*S("F")*S("n")*S("t"))/(3*S("L")))),
     ]
     return pathways
 
@@ -1440,7 +1447,6 @@ def retrieve_tbeaing_information():
 def retrieve_shaft_information():
     print("Retrieving information for solving shaft stresses with mixed loading questions from Shigley.")
     print("Please note that it only solves for stresses and doesn't do selection or iteration yet.")
-    
 
     def find_kb(knowns):
         # unit is in inches
@@ -1634,27 +1640,27 @@ def solve_pathway(pathway, knowns):
 
 
 def query_pathways(context):
-    if (context["question_type"] == QuestionType.FLAT_BELT):
+    if (context["question_type"] == ComponentType.FLAT_BELT):
         pathways = retrieve_flatbelt_information()
-    elif (context["question_type"] == QuestionType.V_BELT):
+    elif (context["question_type"] == ComponentType.V_BELT):
         pathways = retrieve_vbelt_information()
-    elif (context["question_type"] == QuestionType.SYNCHRONOUS_BELT):
+    elif (context["question_type"] == ComponentType.SYNCHRONOUS_BELT):
         pathways = retrieve_syncbelt_information()
-    elif (context["question_type"] == QuestionType.CHAIN):
+    elif (context["question_type"] == ComponentType.CHAIN):
         pathways = retrieve_chain_information()
-    elif (context["question_type"] == QuestionType.SPUR_GEAR):
+    elif (context["question_type"] == ComponentType.SPUR_GEAR):
         pathways = retrieve_spurgear_information()
-    elif (context["question_type"] == QuestionType.HELICAL_GEAR):
+    elif (context["question_type"] == ComponentType.HELICAL_GEAR):
         pathways = retrieve_helicalgear_information()
-    elif (context["question_type"] == QuestionType.BOUNDARY_LUBRICATED_BEARING):
+    elif (context["question_type"] == ComponentType.BOUNDARY_LUBRICATED_BEARING):
         pathways = retrieve_bushing_information()
-    elif (context["question_type"] == QuestionType.BALL_AND_CYLINDRICAL_BEARING_RADIAL):
+    elif (context["question_type"] == ComponentType.BALL_AND_CYLINDRICAL_BEARING_RADIAL):
         pathways = retrieve_bcbearingradial_information()
-    elif (context["question_type"] == QuestionType.BALL_AND_CYLINDRICAL_BEARING_ALL):
+    elif (context["question_type"] == ComponentType.BALL_AND_CYLINDRICAL_BEARING_ALL):
         pathways = retrieve_bcbearingall_information()
-    elif (context["question_type"] == QuestionType.TAPERED_ROLLER_BEARING):
+    elif (context["question_type"] == ComponentType.TAPERED_ROLLER_BEARING):
         pathways = retrieve_tbeaing_information()
-    elif (context["question_type"] == QuestionType.SHAFTS_AND_KEY):
+    elif (context["question_type"] == ComponentType.SHAFTS_AND_KEY):
         pathways = retrieve_shaft_information()
     else:
         raise NotImplementedError("not implemented")

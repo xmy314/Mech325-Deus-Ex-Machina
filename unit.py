@@ -1,7 +1,7 @@
-from infrastructure import QuestionType
+from infrastructure import ComponentType
 from sympy import Symbol as S
 descriptions = {
-    QuestionType.TAPERED_ROLLER_BEARING: {
+    ComponentType.TAPERED_ROLLER_BEARING: {
         S('Bore A'): 'Bore Diameter of bearing A',
         S('Bore B'): 'Bore Diameter of bearing B',
         S('C_{10\,A}'): 'Rated Load for Bearing A.',
@@ -31,7 +31,7 @@ descriptions = {
         S('x_0'): 'One of the Failure Distribution Parameters.',
         S('x_d'): 'Dimension less Lifetime',
     },
-    QuestionType.V_BELT: {
+    ComponentType.V_BELT: {
         S('B'): 'A Helper Value for Computing Center Distance.',
         S('CD'): 'Center Distance',
         S('CD_{rough}'): 'Estimated Proper Center Distance',
@@ -61,7 +61,7 @@ descriptions = {
         S('n_{out}'): 'Output Angular Speed',
         S('n_{sf}'): 'Final Safety Factor',
     },
-    QuestionType.FLAT_BELT: {
+    ComponentType.FLAT_BELT: {
         S('CD'): 'Center Distance',
         S('C_p'): 'Pulley Correction Factor',
         S('C_v'): 'Velocity Correction Factor',
@@ -95,11 +95,11 @@ descriptions = {
         S('t'): 'Belt Thinkness',
         S('w'): 'Weight per Foot.',
     },
-    QuestionType.SYNCHRONOUS_BELT: {
+    ComponentType.SYNCHRONOUS_BELT: {
     },
 }
 units = {
-    QuestionType.TAPERED_ROLLER_BEARING: {
+    ComponentType.TAPERED_ROLLER_BEARING: {
         S('Bore A'): 'mm',
         S('Bore B'): 'mm',
         S('C_{10\,A}'): 'kN',
@@ -129,7 +129,7 @@ units = {
         S('x_0'): '',
         S('x_d'): '',
     },
-    QuestionType.V_BELT: {
+    ComponentType.V_BELT: {
         S('B'): '',
         S('CD'): 'inch',
         S('CD_{rough}'): 'inch',
@@ -159,7 +159,7 @@ units = {
         S('n_{out}'): 'RPM',
         S('n_{sf}'): '',
     },
-    QuestionType.FLAT_BELT: {
+    ComponentType.FLAT_BELT: {
         S('CD'): 'inch',
         S('C_p'): '',
         S('C_v'): '',
@@ -193,6 +193,6 @@ units = {
         S('t'): 'inch',
         S('w'): 'lbf/ft',
     },
-    QuestionType.SYNCHRONOUS_BELT: {
+    ComponentType.SYNCHRONOUS_BELT: {
     },
 }

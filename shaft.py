@@ -20,7 +20,7 @@ class LoadType(Enum):
 def solve_reaction_force(context):
     """given a bunch of force and moment loads, solve."""
 
-    loads = context["load"]
+    loads = context["loads"]
 
     Fx, Fy, Fz, Mx, My, Mz = 0, 0, 0, 0, 0, 0
     for load in loads:
@@ -60,7 +60,7 @@ def solve_reaction_force(context):
             load[3][i] = expr.evalf(subs=sub_dict)
 
     log = r"\begin{align*}"+"\n"
-    for load in context["load"]:
+    for load in context["loads"]:
         log += f"{load[1]} & = {load[3][0]:7.2f}\\hat{{i}}+{load[3][1]:7.2f}\\hat{{j}}+{load[3][2]:7.2f}\\hat{{k}}"+r"\\"+"\n"
         log += f"          & = {sqrt(load[3][0]**2+load[3][1]**2):7.2f}\\hat{{r}}+{load[3][2]:7.2f}\\hat{{k}}"+r"\\"+"\n"
     log += r"\end{align*}"+"\n"
@@ -69,7 +69,7 @@ def solve_reaction_force(context):
 
 def fbd3d(context):
     """return the latex code that draws out the forces in 3d."""
-    loads = context["load"]
+    loads = context["loads"]
     loads.sort(key=lambda x: x[2][2])
     forces = []
     moments = []
@@ -155,7 +155,7 @@ def fbd3d(context):
 def shaft_analysis(context):
     """return the latex code that draws out the internal shear, moment, compression, torsion of the shaft."""
 
-    loads = context["load"]
+    loads = context["loads"]
     loads.sort(key=lambda x: x[2][2])
     key_points = [(0, (0, 0, 0), (0, 0, 0))]
     for load in loads:
@@ -290,6 +290,8 @@ def shaft_analysis(context):
 
     ret2d = "\n".join(ret2d)
 
+    context["internal"] = beam_segments
+
     return ret2d
 
 
@@ -299,7 +301,7 @@ context = {
     "vars": {
 
     },
-    "load": [
+    "loads": [
         # Type, point that the load acts upon, the components of the load.
         (LoadType.FORCE, "R_A", [0, 0, 0], [S("F_{Ax}"), S("F_{Ay}"), 0]),
         (LoadType.FORCE, "F_G", [3.75, 0, 3.5], [-58, 500, 173]),

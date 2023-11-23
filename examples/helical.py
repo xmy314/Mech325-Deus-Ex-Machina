@@ -1,7 +1,7 @@
 from infrastructure import *
 
 input_context = {
-    "question_type": QuestionType.HELICAL_GEAR,
+    "question_type": ComponentType.HELICAL_GEAR,
     "vars": {
 
     },

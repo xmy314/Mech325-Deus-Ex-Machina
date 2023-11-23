@@ -2,7 +2,7 @@ from infrastructure import *
 import sympy as sym
 
 input_context = {
-    "question_type": QuestionType.BOUNDARY_LUBRICATED_BEARING,
+    "question_type": ComponentType.BOUNDARY_LUBRICATED_BEARING,
     "vars": {
         "bushing material": "Oiles SP 500",
 
