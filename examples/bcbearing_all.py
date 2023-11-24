@@ -2,7 +2,7 @@ from infrastructure import *
 
 
 input_context = {
-    "question_type": ComponentType.BALL_AND_CYLINDRICAL_BEARING_ALL,
+    "component_type": ComponentType.BALL_AND_CYLINDRICAL_BEARING_ALL,
     "vars": {
         # text description []
         "rolling element type": "02-series deep-groove ball bearing",

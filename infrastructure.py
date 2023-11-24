@@ -1640,27 +1640,27 @@ def solve_pathway(pathway, knowns):
 
 
 def query_pathways(context):
-    if (context["question_type"] == ComponentType.FLAT_BELT):
+    if (context["component_type"] == ComponentType.FLAT_BELT):
         pathways = retrieve_flatbelt_information()
-    elif (context["question_type"] == ComponentType.V_BELT):
+    elif (context["component_type"] == ComponentType.V_BELT):
         pathways = retrieve_vbelt_information()
-    elif (context["question_type"] == ComponentType.SYNCHRONOUS_BELT):
+    elif (context["component_type"] == ComponentType.SYNCHRONOUS_BELT):
         pathways = retrieve_syncbelt_information()
-    elif (context["question_type"] == ComponentType.CHAIN):
+    elif (context["component_type"] == ComponentType.CHAIN):
         pathways = retrieve_chain_information()
-    elif (context["question_type"] == ComponentType.SPUR_GEAR):
+    elif (context["component_type"] == ComponentType.SPUR_GEAR):
         pathways = retrieve_spurgear_information()
-    elif (context["question_type"] == ComponentType.HELICAL_GEAR):
+    elif (context["component_type"] == ComponentType.HELICAL_GEAR):
         pathways = retrieve_helicalgear_information()
-    elif (context["question_type"] == ComponentType.BOUNDARY_LUBRICATED_BEARING):
+    elif (context["component_type"] == ComponentType.BOUNDARY_LUBRICATED_BEARING):
         pathways = retrieve_bushing_information()
-    elif (context["question_type"] == ComponentType.BALL_AND_CYLINDRICAL_BEARING_RADIAL):
+    elif (context["component_type"] == ComponentType.BALL_AND_CYLINDRICAL_BEARING_RADIAL):
         pathways = retrieve_bcbearingradial_information()
-    elif (context["question_type"] == ComponentType.BALL_AND_CYLINDRICAL_BEARING_ALL):
+    elif (context["component_type"] == ComponentType.BALL_AND_CYLINDRICAL_BEARING_ALL):
         pathways = retrieve_bcbearingall_information()
-    elif (context["question_type"] == ComponentType.TAPERED_ROLLER_BEARING):
+    elif (context["component_type"] == ComponentType.TAPERED_ROLLER_BEARING):
         pathways = retrieve_tbeaing_information()
-    elif (context["question_type"] == ComponentType.SHAFTS_AND_KEY):
+    elif (context["component_type"] == ComponentType.SHAFTS_AND_KEY):
         pathways = retrieve_shaft_information()
     else:
         raise NotImplementedError("not implemented")

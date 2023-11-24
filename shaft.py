@@ -3,7 +3,7 @@ from sympy import Symbol as S
 from enum import Enum
 from math import sin, cos, radians, sqrt
 from os.path import join
-from infrastructure import round_nsig
+from infrastructure import round_nsig, ComponentType, analyze
 
 # This file is for force balancing on a shaft.
 # Input forces in terms of z along shaft and use components x y or in terms of standard angle in x y plane.

@@ -1,7 +1,7 @@
 from infrastructure import *
 
 input_context = {
-    "question_type": ComponentType.FLAT_BELT,
+    "component_type": ComponentType.FLAT_BELT,
     "vars": {
         "belt": "Polyamide F-1",        # text description []
 

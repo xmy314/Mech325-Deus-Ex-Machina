@@ -1,7 +1,7 @@
 from infrastructure import *
 
 input_context = {
-    "question_type": ComponentType.SPUR_GEAR,
+    "component_type": ComponentType.SPUR_GEAR,
     "vars": {
         S("\\phi"):  math.radians(20),
 
@@ -52,7 +52,7 @@ input_context = {
 # 2021 mt 2
 
 input_context = {
-    "question_type": ComponentType.SPUR_GEAR,
+    "component_type": ComponentType.SPUR_GEAR,
     "vars": {
 
         # # if gear size can be choosed, use the following section

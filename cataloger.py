@@ -12,7 +12,7 @@ try:
             descriptions[s] = {}
         if not s in units:
             units[s] = {}
-        context = {"question_type": s}
+        context = {"component_type": s}
         try:
             text_vars, symbolic_vars = list_vars(context)
         except NotImplementedError:
@@ -56,24 +56,24 @@ with open("units_new_version.py", "w+") as fi:
     fi.write("from sympy import Symbol as S\n")
 
     fi.write("descriptions = {\n")
-    for question_type in descriptions:
-        fi.write("    "+str(question_type)+":{\n")
-        for var in descriptions[question_type]:
+    for component_type in descriptions:
+        fi.write("    "+str(component_type)+":{\n")
+        for var in descriptions[component_type]:
             if isinstance(var, sym.Expr):
-                fi.write(f"        S(\"{str(var)}\"): \"{descriptions[question_type][var]}\",\n")
+                fi.write(f"        S(\"{str(var)}\"): \"{descriptions[component_type][var]}\",\n")
             else:
-                fi.write(f"        \"{str(var)}\": \"{descriptions[question_type][var]}\",\n")
+                fi.write(f"        \"{str(var)}\": \"{descriptions[component_type][var]}\",\n")
         fi.write("    },\n")
     fi.write("}\n")
 
     fi.write("units = {\n")
-    for question_type in units:
-        fi.write("    "+str(question_type)+": {\n")
-        for var in units[question_type]:
+    for component_type in units:
+        fi.write("    "+str(component_type)+": {\n")
+        for var in units[component_type]:
             if isinstance(var, sym.Expr):
-                fi.write(f"        S(\"{str(var)}\"): \"{units[question_type][var]}\",\n")
+                fi.write(f"        S(\"{str(var)}\"): \"{units[component_type][var]}\",\n")
             else:
-                fi.write(f"        \"{str(var)}\": \"{units[question_type][var]}\",\n")
+                fi.write(f"        \"{str(var)}\": \"{units[component_type][var]}\",\n")
         fi.write("    },\n")
     fi.write("}\n")
 

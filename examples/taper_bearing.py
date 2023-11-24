@@ -2,7 +2,7 @@ from infrastructure import *
 
 
 input_context = {
-    "question_type": ComponentType.TAPERED_ROLLER_BEARING,
+    "component_type": ComponentType.TAPERED_ROLLER_BEARING,
     "vars": {
         S("a_f"): 1.4,  # service factor,
 

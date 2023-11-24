@@ -1,7 +1,7 @@
 from infrastructure import *
 
 input_context = {
-    "question_type": ComponentType.V_BELT,
+    "component_type": ComponentType.V_BELT,
     "vars": {
         # text description []
         "driver": "Six cylinder engine",

@@ -1,7 +1,7 @@
 from infrastructure import *
 
 input_context = {
-    "question_type": ComponentType.SYNCHRONOUS_BELT,
+    "component_type": ComponentType.SYNCHRONOUS_BELT,
     "vars": {
         # text description []
         "driven": "gear pump",
