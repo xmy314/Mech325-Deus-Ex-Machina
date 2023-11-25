@@ -81,7 +81,7 @@ def fbd3d(context):
 
     normalized_unit_radial_length = sum([sqrt((x[2][0]**2)+(x[2][1]**2)) for x in loads])/len(loads)
     normalized_unit_axial_length = (max([x[2][2] for x in loads])-min([x[2][2] for x in loads]))/10
-    normalized_unit_force = sum([sqrt(x[3][0]**2+x[3][1]**1+x[3][2]**2) for x in forces])/len(forces)
+    normalized_unit_force = sum([sqrt(x[3][0]**2+x[3][1]**2+x[3][2]**2) for x in forces])/len(forces)
 
     ret3d = r"""
 \tdplotsetmaincoords{70}{110}
@@ -243,7 +243,7 @@ def shaft_analysis(context):
             for k in range(21):
                 z = (next_point[0]-this_point[0])*(k)/20+this_point[0]
                 v = next_point[1][i].evalf(subs={S("z"): z})
-                if (k == 0 or k == 20) and abs(v-last_tag) >= 0.01*normalized_unit[i]:
+                if (k == 0 or k == 20) and abs(v-last_tag) >= 0.01*normalized_unit[i] and abs(v) >= 0.01*normalized_unit[i]:
                     ret2d[graph_i] += f"--({z/normalized_unit_axial_length},{v/normalized_unit[i]}) node[above right] {{{round_nsig(v,5):5.0f}}} "
                     last_tag = v
                 else:
@@ -252,6 +252,7 @@ def shaft_analysis(context):
         ret2d[graph_i] += f"--(10,{beam_segments[-1][2][i]/normalized_unit[i]});\n"
         ret2d[graph_i] += r"\end{tikzpicture}"+"\n"
 
+    last_tag = 0
     ret2d[6] += r"\draw[plot](0,0)"
     normalized_unit_shear = sqrt(normalized_unit[0]**2+normalized_unit[1]**2)
     for j in range(len(beam_segments)-1):
@@ -260,32 +261,33 @@ def shaft_analysis(context):
         for k in range(21):
             z = (next_point[0]-this_point[0])*(k)/20+this_point[0]
             v = sqrt((next_point[1][0].evalf(subs={S("z"): z}))**2+(next_point[1][1].evalf(subs={S("z"): z}))**2)
-            if (k == 0 or k == 20) and abs(v-last_tag) >= 0.01*normalized_unit[i]:
+            if (k == 0 or k == 20) and abs(v-last_tag) >= 0.01*normalized_unit_shear and abs(v) >= 0.01*normalized_unit_shear:
                 ret2d[6] += f"--({z/normalized_unit_axial_length},{v/normalized_unit_shear}) node[above right] {{{round_nsig(v,5):5.0f}}} "
                 last_tag = v
             else:
                 ret2d[6] += f"--({z/normalized_unit_axial_length},{v/normalized_unit_shear}) "
 
     v = sqrt((beam_segments[-1][2][0].evalf(subs={S("z"): z}))**2+(beam_segments[-1][2][1].evalf(subs={S("z"): z}))**2)
-    ret2d[6] += f"--(10,{v/normalized_unit[i]});\n"
+    ret2d[6] += f"--(10,{v/normalized_unit_shear});\n"
     ret2d[6] += r"\end{tikzpicture}"+"\n"
 
+    last_tag = 0
     ret2d[7] += r"\draw[plot](0,0)"
-    normalized_unit_shear = sqrt(normalized_unit[3]**2+normalized_unit[4]**2)
+    normalized_unit_moment = sqrt(normalized_unit[3]**2+normalized_unit[4]**2)
     for j in range(len(beam_segments)-1):
         this_point = beam_segments[j]
         next_point = beam_segments[j+1]
         for k in range(21):
             z = (next_point[0]-this_point[0])*(k)/20+this_point[0]
             v = sqrt((next_point[1][3].evalf(subs={S("z"): z}))**2+(next_point[1][4].evalf(subs={S("z"): z}))**2)
-            if (k == 0 or k == 20) and abs(v-last_tag) >= 0.01*normalized_unit[i]:
-                ret2d[7] += f"--({z/normalized_unit_axial_length},{v/normalized_unit_shear}) node[above right] {{{round_nsig(v,5):5.0f}}} "
+            if (k == 0 or k == 20) and abs(v-last_tag) >= 0.01*normalized_unit_moment and abs(v) >= 0.01*normalized_unit_moment:
+                ret2d[7] += f"--({z/normalized_unit_axial_length},{v/normalized_unit_moment}) node[above right] {{{round_nsig(v,5):5.0f}}} "
                 last_tag = v
             else:
-                ret2d[7] += f"--({z/normalized_unit_axial_length},{v/normalized_unit_shear}) "
+                ret2d[7] += f"--({z/normalized_unit_axial_length},{v/normalized_unit_moment}) "
 
     v = sqrt((beam_segments[-1][2][3].evalf(subs={S("z"): z}))**2+(beam_segments[-1][2][4].evalf(subs={S("z"): z}))**2)
-    ret2d[7] += f"--(10,{v/normalized_unit[i]});\n"
+    ret2d[7] += f"--(10,{v/normalized_unit_moment});\n"
     ret2d[7] += r"\end{tikzpicture}"+"\n"
 
     ret2d = "\n".join(ret2d)

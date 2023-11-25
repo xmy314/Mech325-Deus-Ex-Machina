@@ -2,9 +2,11 @@
 /.archive/**/*
 /.vscode/**/*
 /mech325env/**/*
-/latex_output/aux/**/*
 .DS_Store
+
+# Don't track generated content
+/latex_output/aux/**/*
+/latex_output/solution.tex
 
 # For files that are created for temporary testing, prefix the file name with "temp"
 **/temp*.*
-
