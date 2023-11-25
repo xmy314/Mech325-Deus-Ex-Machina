@@ -60,9 +60,9 @@ with open("units_new_version.py", "w+") as fi:
         fi.write("    "+str(component_type)+":{\n")
         for var in descriptions[component_type]:
             if isinstance(var, sym.Expr):
-                fi.write(f"        S(\"{str(var)}\"): \"{descriptions[component_type][var]}\",\n")
+                fi.write(f"        S(r\"{str(var)}\"): \"{descriptions[component_type][var]}\",\n")
             else:
-                fi.write(f"        \"{str(var)}\": \"{descriptions[component_type][var]}\",\n")
+                fi.write(f"        r\"{str(var)}\": \"{descriptions[component_type][var]}\",\n")
         fi.write("    },\n")
     fi.write("}\n")
 
@@ -71,9 +71,9 @@ with open("units_new_version.py", "w+") as fi:
         fi.write("    "+str(component_type)+": {\n")
         for var in units[component_type]:
             if isinstance(var, sym.Expr):
-                fi.write(f"        S(\"{str(var)}\"): \"{units[component_type][var]}\",\n")
+                fi.write(f"        S(r\"{str(var)}\"): \"{units[component_type][var]}\",\n")
             else:
-                fi.write(f"        \"{str(var)}\": \"{units[component_type][var]}\",\n")
+                fi.write(f"        r\"{str(var)}\": \"{units[component_type][var]}\",\n")
         fi.write("    },\n")
     fi.write("}\n")
 
