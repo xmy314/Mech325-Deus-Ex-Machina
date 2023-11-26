@@ -254,11 +254,20 @@ def fbd3d(context):
         ]
 
         # the indicator lines
-        if abs(np[1]) < 0.0001:
-            ret3d += f"    \draw[marking]({np[0]},{np[1]},{np[2]})--({np[0]},0,{np[2]}) node[pos=.5 ,below, sloped]{{{round_nsig(force[2][1],5):5.2f}}};\n"
-
-        if abs(np[0]) < 0.0001:
-            ret3d += f"    \draw[marking]({np[0]},0,{np[2]})--(0,0,{np[2]}) node[pos=.5 ,below, sloped]{{{round_nsig(force[2][0],5):5.2f}}};\n"
+        if abs(np[1]) >= 0.000001:
+            ret3d += f"    \draw[marking]({np[0]},{np[1]},{np[2]})--({np[0]},0,{np[2]}) "
+            if np[0] > 0:
+                ret3d += f"node[pos=.5 ,below, sloped]"
+            else:
+                ret3d += f"node[pos=.5 ,above, sloped]"
+            ret3d += f"{{{round_nsig(force[2][1],5):5.2f}}};\n"
+        if abs(np[0]) >= 0.000001:
+            ret3d += f"    \draw[marking]({np[0]},0,{np[2]})--(0,0,{np[2]}) "
+            if np[1] > 0:
+                ret3d += f"node[pos=.5 ,below, sloped]"
+            else:
+                ret3d += f"node[pos=.5 ,above, sloped]"
+            ret3d += f"{{{round_nsig(force[2][0],5):5.2f}}};\n"
 
         # the components.
         if (nf[0] != 0):
