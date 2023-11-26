@@ -254,10 +254,10 @@ def fbd3d(context):
         ]
 
         # the indicator lines
-        if np[1] != 0:
+        if abs(np[1]) < 0.0001:
             ret3d += f"    \draw[marking]({np[0]},{np[1]},{np[2]})--({np[0]},0,{np[2]}) node[pos=.5 ,below, sloped]{{{round_nsig(force[2][1],5):5.2f}}};\n"
 
-        if np[0] != 0:
+        if abs(np[0]) < 0.0001:
             ret3d += f"    \draw[marking]({np[0]},0,{np[2]})--(0,0,{np[2]}) node[pos=.5 ,below, sloped]{{{round_nsig(force[2][0],5):5.2f}}};\n"
 
         # the components.
@@ -311,7 +311,7 @@ def shaft_analysis(context):
 
     normalized_unit_axial_length = (key_points[-1][0])/10
 
-    # draw 6 plots
+    # draw 8 plots
 
     # begin 2d plot
     ret2d = [r"""\begin{tikzpicture}[
