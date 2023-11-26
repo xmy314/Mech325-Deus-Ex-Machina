@@ -1,7 +1,8 @@
 import sympy as sym
 from sympy import Symbol as S
 from enum import Enum
-from math import sin, cos, radians, sqrt, copysign
+from math import radians, copysign
+from sympy import sin, cos, tan, sqrt
 from os.path import join
 from infrastructure import round_nsig, ComponentType, analyze
 
@@ -17,12 +18,128 @@ class LoadType(Enum):
     MOMENT = 1
 
 
-def rot_z(vec, theta):
-    return [
-        cos(theta)*vec[0]-sin(theta)*vec[1],
-        sin(theta)*vec[0]+cos(theta)*vec[1],
-        vec[2],
-    ]
+def convert_component_to_load(context):
+
+    logs = []
+
+    components = context["components"]
+    rotation_direction = context["vars"]["rotation direction"]  # 1 for positive x, -1 for negative x
+    n = context["vars"][S("n")]
+    loads = []
+    for component in components:
+        driving = component["is driver"]
+        radius = component["diameter"]/2
+        torque = 63025*component["power"]/n
+        nominal_force = 0 if torque == 0 else torque/radius
+        rf_pair = []
+        if component["component_type"] == ComponentType.FLAT_BELT:
+            K = 3
+            # tight side
+            rf_pair.append((
+                (0, rotation_direction*driving*radius, component["z"]),
+                ((K/(K-1))*nominal_force, 0, 0)
+            ))
+            # loose side
+            rf_pair.append((
+                (0, -rotation_direction*driving*radius, component["z"]),
+                ((1/(K-1))*nominal_force, 0, 0)
+            ))
+        elif component["component_type"] == ComponentType.V_BELT:
+            K = 5
+            # tight side
+            rf_pair.append((
+                (0, rotation_direction*driving*radius, component["z"]),
+                ((K/(K-1))*nominal_force, 0, 0)
+            ))
+            # loose side
+            rf_pair.append((
+                (0, -rotation_direction*driving*radius, component["z"]),
+                ((1/(K-1))*nominal_force, 0, 0)
+            ))
+        elif component["component_type"] == ComponentType.CHAIN:
+            # tight side
+            rf_pair.append((
+                (0, rotation_direction*driving*radius, component["z"]),
+                (nominal_force, 0, 0)
+            ))
+        elif component["component_type"] == ComponentType.SPUR_GEAR:
+            Fx = -nominal_force*tan(component["pressure angle"])
+            Fy = -driving*rotation_direction*nominal_force
+            rf_pair.append((
+                (radius, 0, component["z"]),
+                (Fx, Fy, 0)
+            ))
+        elif component["component_type"] == ComponentType.HELICAL_GEAR:
+            right_handed = component["is right hand"]
+
+            Fx = -nominal_force*tan(component["normal pressure angle"])/cos(component["helix angle"])
+            Fy = -driving*rotation_direction*nominal_force
+            Fz = rotation_direction*driving*right_handed*nominal_force*tan(component["helix angle"])
+
+            rf_pair.append((
+                (radius, 0, component["z"]),
+                (Fx, Fy, Fz)
+            ))
+        elif component["component_type"] == ComponentType.BEVEL_GEAR:
+            positive_cone = component["is cone right"]
+
+            Fx = -nominal_force*tan(component["pressure angle"])*cos(component["cone angle"])
+            Fy = -driving*rotation_direction*nominal_force
+            Fz = -positive_cone*nominal_force*tan(component["pressure angle"])*sin(component["cone angle"])
+
+            rf_pair.append((
+                (radius, 0, component["z"]),
+                (Fx, Fy, Fz)
+            ))
+            raise NotImplementedError("Check component_type.")
+        elif component["component_type"] == ComponentType.WORM_GEAR:
+            right_handed = component["is right hand"]
+
+            Fx = -nominal_force*tan(component["normal pressure angle"])/sin(component["lead angle"])
+            Fy = -driving*rotation_direction*nominal_force
+            Fz = rotation_direction*driving*right_handed*nominal_force*sin(component["lead angle"])
+
+            rf_pair.append((
+                (radius, 0, component["z"]),
+                (Fx, Fy, Fz)
+            ))
+            raise NotImplementedError("Check component_type.")
+        elif component["component_type"] == ComponentType.BALL_AND_CYLINDRICAL_BEARING_RADIAL:
+            loads.append((
+                LoadType.FORCE,
+                component["name"],
+                [0, 0, component["z"]],
+                [S("R_{"+component["name"]+"x}"), S("R_{"+component["name"]+"y}"), 0]
+            ))
+        elif component["component_type"] == ComponentType.BALL_AND_CYLINDRICAL_BEARING_ALL:
+            loads.append((
+                LoadType.FORCE,
+                component["name"],
+                [0, 0, component["z"]],
+                [S("R_{"+component["name"]+"x}"), S("R_{"+component["name"]+"y}"), S("R_{"+component["name"]+"z}")]
+            ))
+        else:
+            raise NotImplementedError("Check component_type.")
+
+        theta = component["theta"]
+        for r, f in rf_pair:
+            rx = cos(theta)*r[0]-sin(theta)*r[1]
+            ry = sin(theta)*r[0]+cos(theta)*r[1]
+            rz = r[2]
+            fx = cos(theta)*f[0]-sin(theta)*f[1]
+            fy = sin(theta)*f[0]+cos(theta)*f[1]
+            fz = f[2]
+            loads.append((
+                LoadType.FORCE,
+                component["name"],
+                [rx, ry, rz],
+                [fx, fy, fz],
+            ))
+
+    if not "loads" in context:
+        context["loads"] = []
+    context["loads"] += loads
+    return "\n".join(logs)
 
 
 def solve_reaction_force(context):
@@ -138,10 +255,10 @@ def fbd3d(context):
 
         # the indicator lines
         if np[1] != 0:
-            ret3d += f"    \draw[marking]({np[0]},{np[1]},{np[2]})--({np[0]},0,{np[2]}) node[pos=.5 ,below, sloped]{{{round_nsig(force[2][1],5)}}};\n"
+            ret3d += f"    \draw[marking]({np[0]},{np[1]},{np[2]})--({np[0]},0,{np[2]}) node[pos=.5 ,below, sloped]{{{round_nsig(force[2][1],5):5.2f}}};\n"
 
         if np[0] != 0:
-            ret3d += f"    \draw[marking]({np[0]},0,{np[2]})--(0,0,{np[2]}) node[pos=.5 ,below, sloped]{{{round_nsig(force[2][0],5)}}};\n"
+            ret3d += f"    \draw[marking]({np[0]},0,{np[2]})--(0,0,{np[2]}) node[pos=.5 ,below, sloped]{{{round_nsig(force[2][0],5):5.2f}}};\n"
 
         # the components.
         if (nf[0] != 0):
@@ -298,28 +415,73 @@ def shaft_analysis(context):
 # Unit for length, force, and moment are not important as long as
 # unit length cross unit force = unit moment.
 context = {
-    "loads": [
-        # Type, point that the load acts upon, the components of the load.
-        (LoadType.FORCE, "A", [0, 0, 0], [0, -1.5*2*(63025*10/240)/12, 0]),
-        (LoadType.MOMENT, "A", [0, 0, 0], [0, 0, (63025*10/240)]),
-        (LoadType.FORCE, "B", [0, 0, 6], [S("R_{Bx}"), S("R_{By}"), 0]),
-        (LoadType.FORCE, "C", [0, 0, 36], [S("R_{Cx}"), S("R_{Cy}"), 0]),
-        (LoadType.FORCE, "D", [0, 0, 42], rot_z(
-            [
-                -2*(63025*15/240)/12*sym.tan(20),
-                -2*(63025*15/240)/12,
-                0
-            ],
-            radians(210),
-        )),
-        (LoadType.MOMENT, "D", [0, 0, 42], [0, 0, -(63025*S("H_{D}")/240)]),
-        (LoadType.FORCE, "E", [0, 0, 52], rot_z([2*(63025*5/240)/12, 0, 0], radians(30))),
-        (LoadType.MOMENT, "E", [0, 0, 52], [0, 0, (63025*5/240)]),
+    "components": [
+        {
+            "component_type": ComponentType.V_BELT,
+            "name": "A",
+            "z": 0,  # [inch]
+            "theta": radians(-90),
+            "is driver": 1,
+            "power": 10,  # [hp]
+            "diameter": 12,
+            "left feature": "ring",
+            "right feature": "ring",
+        },
+        {
+            "component_type": ComponentType.BALL_AND_CYLINDRICAL_BEARING_RADIAL,
+            "name": "B",
+            "z": 6,
+            "theta": 0,
+            "is driver": 0,
+            "power": 0,
+            "diameter": 0,
+            "left feature": "ring",
+            "right feature": "sharp fillet",
+        },
+        {
+            "component_type": ComponentType.BALL_AND_CYLINDRICAL_BEARING_RADIAL,
+            "name": "C",
+            "z": 36,
+            "theta": 0,
+            "is driver": 0,
+            "power": 0,
+            "diameter": 0,
+            "left feature": "shoulder",
+            "right feature": "sharp fillet",
+        },
+        {
+            "component_type": ComponentType.SPUR_GEAR,
+            "name": "D",
+            "z": 42,
+            "theta": radians(210),
+            "is driver": -1,
+            # "power": sym.Integer(15),  # This is passed to avoid over constraining and floating point error.
+            "power": S("P_g"),
+            "diameter": 8,
+            "pressure angle": radians(20),
+            "left feature": "ring",
+            "right feature": "ring",
+        },
+        {
+            "component_type": ComponentType.CHAIN,
+            "name": "E",
+            "z": 52,
+            "theta": radians(30),
+            "is driver": 1,
+            "power": sym.Integer(5),
+            "diameter": 6,
+            "left feature": "ring",
+            "right feature": "ring",
+        },
     ],
-    "vars": {}
+    "vars": {
+        S("n"): 240,  # [RPM]
+        "rotation direction": -1,
+    },
 }
 
 logs = []
+logs.append(convert_component_to_load(context))
 logs.append(solve_reaction_force(context))
 logs.append(fbd3d(context))
 logs.append(shaft_analysis(context))
