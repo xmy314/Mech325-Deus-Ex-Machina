@@ -307,16 +307,29 @@ def shaft_analysis(context):
 
     loads = context["loads"]
     loads.sort(key=lambda x: x[2][2])
-    key_points = [(0, (0, 0, 0), (0, 0, 0))]
+    key_points = [[0, [0, 0, 0], [0, 0, 0]]]
     for load in loads:
         if load[0] == LoadType.MOMENT:
             rx, ry, rz = load[2]
-            mxyz = load[3]
-            key_points.append((rz, (0, 0, 0), mxyz))
+            mx, my, mz = load[3]
+            if rz == key_points[-1][0]:
+                key_points[-1][2][0] += mx
+                key_points[-1][2][1] += my
+                key_points[-1][2][2] += mz
+            else:
+                key_points.append([rz, [0, 0, 0], [mx, my, mz]])
         else:
             rx, ry, rz = load[2]
             fx, fy, fz = load[3]
-            key_points.append((rz, (fx, fy, fz), (ry*fz, -rx*fz, rx*fy-ry*fx)))
+            if rz == key_points[-1][0]:
+                key_points[-1][1][0] += fx
+                key_points[-1][1][1] += fy
+                key_points[-1][1][2] += fz
+                key_points[-1][2][0] += ry*fz
+                key_points[-1][2][1] += -rx*fz
+                key_points[-1][2][2] += rx*fy-ry*fx
+            else:
+                key_points.append([rz, [fx, fy, fz], [ry*fz, -rx*fz, rx*fy-ry*fx]])
 
     normalized_unit_axial_length = (key_points[-1][0])/10
 
