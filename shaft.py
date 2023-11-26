@@ -1,7 +1,7 @@
 import sympy as sym
 from sympy import Symbol as S
 from enum import Enum
-from math import sin, cos, radians, sqrt
+from math import sin, cos, radians, sqrt, copysign
 from os.path import join
 from infrastructure import round_nsig, ComponentType, analyze
 
@@ -15,6 +15,14 @@ from infrastructure import round_nsig, ComponentType, analyze
 class LoadType(Enum):
     FORCE = 0
     MOMENT = 1
+
+
+def rot_z(vec, theta):
+    return [
+        cos(theta)*vec[0]-sin(theta)*vec[1],
+        sin(theta)*vec[0]+cos(theta)*vec[1],
+        vec[2],
+    ]
 
 
 def solve_reaction_force(context):
@@ -45,6 +53,9 @@ def solve_reaction_force(context):
         if isinstance(expr, sym.Expr):
             all_vars += expr.free_symbols
 
+    if not "vars" in context:
+        context["vars"] = {}
+
     targets = [v for v in all_vars if not v in context["vars"]]
 
     result = sym.solve(exprs, targets, dict=True)
@@ -61,7 +72,8 @@ def solve_reaction_force(context):
 
     log = r"\begin{align*}"+"\n"
     for load in context["loads"]:
-        log += f"{load[1]} & = {load[3][0]:7.2f}\\hat{{i}}+{load[3][1]:7.2f}\\hat{{j}}+{load[3][2]:7.2f}\\hat{{k}}"+r"\\"+"\n"
+        load_name = f"F_{load[1]}" if load[0] == LoadType.FORCE else f"M_{load[1]}"
+        log += f"{load_name} & = {load[3][0]:7.2f}\\hat{{i}}+{load[3][1]:7.2f}\\hat{{j}}+{load[3][2]:7.2f}\\hat{{k}}"+r"\\"+"\n"
         log += f"          & = {sqrt(load[3][0]**2+load[3][1]**2):7.2f}\\hat{{r}}+{load[3][2]:7.2f}\\hat{{k}}"+r"\\"+"\n"
     log += r"\end{align*}"+"\n"
     return log
@@ -82,6 +94,9 @@ def fbd3d(context):
     normalized_unit_radial_length = sum([sqrt((x[2][0]**2)+(x[2][1]**2)) for x in loads])/len(loads)
     normalized_unit_axial_length = (max([x[2][2] for x in loads])-min([x[2][2] for x in loads]))/10
     normalized_unit_force = sum([sqrt(x[3][0]**2+x[3][1]**2+x[3][2]**2) for x in forces])/len(forces)
+
+    if (normalized_unit_radial_length == 0):
+        normalized_unit_radial_length = 1
 
     ret3d = r"""
 \tdplotsetmaincoords{70}{110}
@@ -109,6 +124,10 @@ def fbd3d(context):
         ret3d += f"    \draw(0,-0.1,{npz1})--(0,-1.7,{npz1});\n"
         ret3d += f"    \draw[latex-latex](0,-1.5,{npz0})--(0,-1.5,{npz1}) node[pos=0.5,below] {{{round_nsig(loads[i+1][2][2]-loads[i][2][2],5)}}};\n\n"
 
+    for i in range(len(loads)):
+        npz0 = loads[i][2][2]/normalized_unit_axial_length
+        ret3d += r"    \node[below right] at "+f"(0,0,{npz0}){{${loads[i][1]}$}};\n"
+
     for force in forces:
         nf = [x/normalized_unit_force for x in force[3]]
         np = [
@@ -125,7 +144,12 @@ def fbd3d(context):
             ret3d += f"    \draw[marking]({np[0]},0,{np[2]})--(0,0,{np[2]}) node[pos=.5 ,below, sloped]{{{round_nsig(force[2][0],5)}}};\n"
 
         # the components.
-        ret3d += f"    \draw[forces,-latex]({-nf[0]+np[0]},{-nf[1]+np[1]},{-nf[2]+np[2]})--({np[0]},{np[1]},{np[2]}) node[pos=0, left]{{${force[1]}$}};\n"
+        if (nf[0] != 0):
+            ret3d += f"    \draw[forces,-latex]({-(nf[0]+copysign(0.5,nf[0]))+np[0]},{np[1]},{np[2]})--({np[0]},{np[1]},{np[2]}) ;\n"
+        if (nf[1] != 0):
+            ret3d += f"    \draw[forces,-latex]({np[0]},{-(nf[1]+copysign(0.5,nf[1]))+np[1]},{np[2]})--({np[0]},{np[1]},{np[2]}) ;\n"
+        if (nf[2] != 0):
+            ret3d += f"    \draw[forces,-latex]({np[0]},{np[1]},{-(nf[2]+copysign(0.5,nf[2]))+np[2]})--({np[0]},{np[1]},{np[2]}) ;\n"
 
         ret3d += "\n"
 
@@ -142,9 +166,9 @@ def fbd3d(context):
         ret3d += r"    \tdplotsetrotatedcoordsorigin{(MomentOrigin)}"+"\n"
         ret3d += r"    \tdplotsetrotatedcoords{90}{-90}{-90}"+"\n"
         if moment[3][2] <= 0:
-            ret3d += r"    \tdplotdrawarc[tdplot_rotated_coords,-latex]{(0,0,0)}{0.5}{0}{180}{anchor = east}{$"+f"{moment[1]}"+"$}\n"
+            ret3d += r"    \tdplotdrawarc[tdplot_rotated_coords,-latex]{(0,0,0)}{0.5}{0}{180}{anchor = east}{};"+"\n"
         else:
-            ret3d += r"    \tdplotdrawarc[tdplot_rotated_coords,-latex]{(0,0,0)}{0.5}{180}{0}{anchor = east}{$"+f"{moment[1]}"+"$}\n"
+            ret3d += r"    \tdplotdrawarc[tdplot_rotated_coords,-latex]{(0,0,0)}{0.5}{180}{0}{anchor = east}{};"+"\n"
         ret3d += r"    \tdplotresetrotatedcoordsorigin"+"\n\n"
 
     ret3d += "}\n\n"
@@ -193,10 +217,10 @@ def shaft_analysis(context):
     ]
     ]
 
-    maximum_value = [0.0001 for i in range(6)]
+    maximum_value = [0.0001 for i in range(8)]
 
     # fx fy are shear, fz is compression, mx, my are moments, mz is torsion.
-    beam_segments = [(0, (0, 0, 0, 0, 0, 0), (0, 0, 0, 0, 0, 0))]  # z, v(z-), v(z).
+    beam_segments = [(0, (0, 0, 0, 0, 0, 0, 0, 0), (0, 0, 0, 0, 0, 0, 0, 0))]  # z, v(z-), v(z).
 
     for key_point in key_points:
 
@@ -206,6 +230,8 @@ def shaft_analysis(context):
         rmx_expr = beam_segments[-1][2][3]+sym.integrate(rfx_expr, S("z")).subs({S("z"): S("z")-beam_segments[-1][0]})
         rmy_expr = beam_segments[-1][2][4]+sym.integrate(rfy_expr, S("z")).subs({S("z"): S("z")-beam_segments[-1][0]})
         rmz_expr = beam_segments[-1][2][5]+sym.integrate(0, S("z")).subs({S("z"): S("z")-beam_segments[-1][0]})   # 0 for not supporting distributed load
+        rfxy_expr = sym.sqrt(rfx_expr**2+rfy_expr**2)
+        rmxy_expr = sym.sqrt(rmx_expr**2+rmy_expr**2)
 
         rfx_accu = rfx_expr.evalf(subs={S("z"): key_point[0]}) + key_point[1][0]
         rfy_accu = rfy_expr.evalf(subs={S("z"): key_point[0]}) + key_point[1][1]
@@ -213,11 +239,13 @@ def shaft_analysis(context):
         rmx_accu = rmx_expr.evalf(subs={S("z"): key_point[0]}) - key_point[2][1]  # rmx means moment in xz plane which is y in vector notation which is why the y moment load is added. The negative sign is a quirk as xz is negative y.
         rmy_accu = rmy_expr.evalf(subs={S("z"): key_point[0]}) + key_point[2][0]  # rmy means moment in yz plane which is x in vector notation which is why the x moment load is added.
         rmz_accu = rmz_expr.evalf(subs={S("z"): key_point[0]}) + key_point[2][2]
+        rfxy_accu = sym.sqrt(rfx_accu**2+rfy_accu**2)
+        rmxy_accu = sym.sqrt(rmx_accu**2+rmy_accu**2)
 
         beam_segments.append((
             key_point[0],
-            (rfx_expr, rfy_expr, rfz_expr, rmx_expr, rmy_expr, rmz_expr),
-            (rfx_accu, rfy_accu, rfz_accu, rmx_accu, rmy_accu, rmz_accu),
+            (rfx_expr, rfy_expr, rfz_expr, rmx_expr, rmy_expr, rmz_expr, rfxy_expr, rmxy_expr),
+            (rfx_accu, rfy_accu, rfz_accu, rmx_accu, rmy_accu, rmz_accu, rfxy_accu, rfxy_expr),
         ))
 
         maximum_value = [
@@ -227,13 +255,15 @@ def shaft_analysis(context):
             max(maximum_value[3], abs(rmx_expr.evalf(subs={S("z"): key_point[0]})), abs(rmx_accu)),
             max(maximum_value[4], abs(rmy_expr.evalf(subs={S("z"): key_point[0]})), abs(rmy_accu)),
             max(maximum_value[5], abs(rmz_expr.evalf(subs={S("z"): key_point[0]})), abs(rmz_accu)),
+            max(maximum_value[6], abs(rfxy_expr.evalf(subs={S("z"): key_point[0]})), abs(rfxy_accu)),
+            max(maximum_value[7], abs(rmxy_expr.evalf(subs={S("z"): key_point[0]})), abs(rfxy_expr)),
         ]
 
     normalized_unit = [v/1.8 for v in maximum_value]
 
-    graph_order = [0, 2, 5, 1, 3, 4]
+    graph_order = [0, 2, 5, 1, 3, 4, 6, 7]  # look up from variable index to graph index
 
-    for i in range(6):
+    for i in range(8):
         last_tag = 0
         graph_i = graph_order[i]
         ret2d[graph_i] += r"\draw[plot](0,0)"
@@ -250,45 +280,13 @@ def shaft_analysis(context):
                     ret2d[graph_i] += f"--({z/normalized_unit_axial_length},{v/normalized_unit[i]}) "
 
         ret2d[graph_i] += f"--(10,{beam_segments[-1][2][i]/normalized_unit[i]});\n"
+
+    for i in range(8):
+        graph_i = graph_order[i]
+        for i in range(len(loads)):
+            npz0 = loads[i][2][2]/normalized_unit_axial_length
+            ret2d[graph_i] += r"    \node[below] at "+f"({npz0},0){{${loads[i][1]}$}};\n"
         ret2d[graph_i] += r"\end{tikzpicture}"+"\n"
-
-    last_tag = 0
-    ret2d[6] += r"\draw[plot](0,0)"
-    normalized_unit_shear = sqrt(normalized_unit[0]**2+normalized_unit[1]**2)
-    for j in range(len(beam_segments)-1):
-        this_point = beam_segments[j]
-        next_point = beam_segments[j+1]
-        for k in range(21):
-            z = (next_point[0]-this_point[0])*(k)/20+this_point[0]
-            v = sqrt((next_point[1][0].evalf(subs={S("z"): z}))**2+(next_point[1][1].evalf(subs={S("z"): z}))**2)
-            if (k == 0 or k == 20) and abs(v-last_tag) >= 0.01*normalized_unit_shear and abs(v) >= 0.01*normalized_unit_shear:
-                ret2d[6] += f"--({z/normalized_unit_axial_length},{v/normalized_unit_shear}) node[above right] {{{round_nsig(v,5):5.0f}}} "
-                last_tag = v
-            else:
-                ret2d[6] += f"--({z/normalized_unit_axial_length},{v/normalized_unit_shear}) "
-
-    v = sqrt((beam_segments[-1][2][0].evalf(subs={S("z"): z}))**2+(beam_segments[-1][2][1].evalf(subs={S("z"): z}))**2)
-    ret2d[6] += f"--(10,{v/normalized_unit_shear});\n"
-    ret2d[6] += r"\end{tikzpicture}"+"\n"
-
-    last_tag = 0
-    ret2d[7] += r"\draw[plot](0,0)"
-    normalized_unit_moment = sqrt(normalized_unit[3]**2+normalized_unit[4]**2)
-    for j in range(len(beam_segments)-1):
-        this_point = beam_segments[j]
-        next_point = beam_segments[j+1]
-        for k in range(21):
-            z = (next_point[0]-this_point[0])*(k)/20+this_point[0]
-            v = sqrt((next_point[1][3].evalf(subs={S("z"): z}))**2+(next_point[1][4].evalf(subs={S("z"): z}))**2)
-            if (k == 0 or k == 20) and abs(v-last_tag) >= 0.01*normalized_unit_moment and abs(v) >= 0.01*normalized_unit_moment:
-                ret2d[7] += f"--({z/normalized_unit_axial_length},{v/normalized_unit_moment}) node[above right] {{{round_nsig(v,5):5.0f}}} "
-                last_tag = v
-            else:
-                ret2d[7] += f"--({z/normalized_unit_axial_length},{v/normalized_unit_moment}) "
-
-    v = sqrt((beam_segments[-1][2][3].evalf(subs={S("z"): z}))**2+(beam_segments[-1][2][4].evalf(subs={S("z"): z}))**2)
-    ret2d[7] += f"--(10,{v/normalized_unit_moment});\n"
-    ret2d[7] += r"\end{tikzpicture}"+"\n"
 
     ret2d = "\n".join(ret2d)
 
@@ -300,16 +298,25 @@ def shaft_analysis(context):
 # Unit for length, force, and moment are not important as long as
 # unit length cross unit force = unit moment.
 context = {
-    "vars": {
-
-    },
     "loads": [
         # Type, point that the load acts upon, the components of the load.
-        (LoadType.FORCE, "R_A", [0, 0, 0], [S("F_{Ax}"), S("F_{Ay}"), 0]),
-        (LoadType.FORCE, "F_G", [3.75, 0, 3.5], [-58, 500, 173]),
-        (LoadType.FORCE, "R_C", [0, 0, 7], [S("F_{Cx}"), S("F_{Cy}"), S("F_{Cz}")]),
-        (LoadType.MOMENT, "M_C", [0, 0, 7], [0, 0, S("M_{Cz}")]),
-    ]
+        (LoadType.FORCE, "A", [0, 0, 0], [0, -1.5*2*(63025*10/240)/12, 0]),
+        (LoadType.MOMENT, "A", [0, 0, 0], [0, 0, (63025*10/240)]),
+        (LoadType.FORCE, "B", [0, 0, 6], [S("R_{Bx}"), S("R_{By}"), 0]),
+        (LoadType.FORCE, "C", [0, 0, 36], [S("R_{Cx}"), S("R_{Cy}"), 0]),
+        (LoadType.FORCE, "D", [0, 0, 42], rot_z(
+            [
+                -2*(63025*15/240)/12*sym.tan(20),
+                -2*(63025*15/240)/12,
+                0
+            ],
+            radians(210),
+        )),
+        (LoadType.MOMENT, "D", [0, 0, 42], [0, 0, -(63025*S("H_{D}")/240)]),
+        (LoadType.FORCE, "E", [0, 0, 52], rot_z([2*(63025*5/240)/12, 0, 0], radians(30))),
+        (LoadType.MOMENT, "E", [0, 0, 52], [0, 0, (63025*5/240)]),
+    ],
+    "vars": {}
 }
 
 logs = []
