@@ -19,11 +19,11 @@ from enum import Enum
 def Geqn(a, b): return a-b
 
 
-def round_nsig(v, n): return 0 if v == 0 else round(v, -int(math.floor(math.log10(abs(v))))+n-1)
+def round_nsig(v, n): return 0 if v == 0 else round(round(v, -int(math.floor(math.log10(abs(v))))+n-1), 10)
 
 
 #  a few helper functions for pretty print.
-def ir(e): return {i: round(i, -int(math.floor(math.log10(abs(i))))+2) for i in e.atoms(sym.Float)}
+def ir(e): return {i: round(float(i), -int(math.floor(math.log10(abs(float(i)))))+2) for i in e.atoms(sym.Float)}
 
 
 def touch(e): return e.xreplace(ir(e))
@@ -45,11 +45,13 @@ class ComponentType(Enum):
     BALL_AND_CYLINDRICAL_BEARING_RADIAL = 12    # TODO need to determine clearance
     BALL_AND_CYLINDRICAL_BEARING_ALL = 13       # TODO need to determine clearance.
     TAPERED_ROLLER_BEARING = 14                 # TODO need to determine clearance.
-    SHAFTS_AND_KEY = 15                         # not taught yet
-    POWER_SCREWS = 16                           # not taught yet
-    BALL_SCREWS = 17                            # not taught yet
-    SPRINGS = 18                                # not taught yet
-    FASTENER_AND_BOLTS = 19                     # not taught yet
+    SHAFT_POINT = 15                            # TODO
+    KEY = 16                                    # TODO
+    RETAINING_RING = 17                         # TODO
+    POWER_SCREWS = 18                           # TODO
+    BALL_SCREWS = 19                            # not taught yet
+    SPRINGS = 20                                # not taught yet
+    FASTENER_AND_BOLTS = 21                     # not taught yet
 
 
 class PathType(Enum):
@@ -57,8 +59,10 @@ class PathType(Enum):
     TABLE_OR_FIGURE = 1
     # things that can be represented by equations solved automatically.
     EQUATION = 2
+    # latex output describes it as a table or figure but are solved automatically by custom curfit.
+    MOCK_TABLE_OR_FIGURE = 3
     # things that are more complicated and needs a python function. This takes care of branching and looping. can be automatic or manual. can nest other two types.
-    CUSTOM = 3
+    CUSTOM = 4
 
 
 #################################################################
@@ -1444,7 +1448,7 @@ def retrieve_tbeaing_information():
     return pathways
 
 
-def retrieve_shaft_information():
+def retrieve_shaft_point_information_shigley():
     print("Retrieving information for solving shaft stresses with mixed loading questions from Shigley.")
     print("Please note that it only solves for stresses and doesn't do selection or iteration yet.")
 
@@ -1558,6 +1562,77 @@ def retrieve_shaft_information():
 
     return pathways
 
+
+def retrieve_shaft_point_information_mott():
+    print("Retrieving information for solving shaft stresses with mixed loading questions from Mott and Shigley.")
+    print("Please note that this only solves for one point on the shaft.")
+
+    def diameter_iteration(knowns):
+        logs = []
+        if knowns[S("D_{iter}")] > knowns[S("D_{min}")]:
+            logs.append(f'Since $D_{{iter}} = {knowns[S("D_{iter}")]:7.2f} > {knowns[S("D_{min}")]:7.2f} = D_{{min}}$, the current selected diameter is good.')
+            knowns[S("D")] = knowns[S("D_{iter}")]
+        else:
+            new_iter_d = math.ceil(4*knowns[S("D_{min}")])/4
+            logs.append(f'Since $D_{{iter}} = {knowns[S("D_{iter}")]:7.2f} < {knowns[S("D_{min}")]:7.2f} = D_{{min}}$, round $D_{{min}}$ up to ${new_iter_d}$ and let it be the new $D_{{iter}}$ to continue iteration.')
+            knowns[S("D_{iter}")] = new_iter_d
+            discards = [S("C_s"), S("s_n'"), S("D_{min\\,s}"), S("D_{min\\,t}"), S("D_{min}")]
+            for discard in discards:
+                if discard in knowns:
+                    knowns.pop(discard)
+        return logs
+
+    def cs_mock(knowns):
+        knowns[S("C_s")] = round((2.85289**(knowns[S("D_{iter}")]**(-0.0857608))-2.15255)/2+0.5, 2)
+
+    def shear_wrapper(knowns):
+        logs = []
+        if knowns[S("V")] != 0:
+            logs += solve_pathway((PathType.EQUATION, "Mott 12-16", Geqn(S("D_{min\\,s}"), sym.sqrt(2.94*S("K_t")*S("V")*S("N")/S("s_n'")))), knowns)
+        else:
+            knowns[S("D_{min\\,s}")] = 0
+        return logs
+
+    def moment_wrapper(knowns):
+        logs = []
+        if knowns[S("M")] != 0 or knowns[S("T")] != 0:
+            logs += solve_pathway((PathType.EQUATION, "Mott 12-24", Geqn(
+                S("D_{min\\,t}"),
+                sym.cbrt(
+                    32*S("N")/sym.pi *
+                    sym.sqrt(
+                        (S("K_t")*S("M")/S("s_n'"))**2 +
+                        3/4*(S("T")/S("s_y"))**2
+                    )
+                )
+            )), knowns)
+        else:
+            knowns[S("D_{min\\,t}")] = 0
+        return logs
+
+    pathways = [
+        (PathType.EQUATION, "Make a Guess", Geqn(S("D_{iter}"), 0.5)),
+        (PathType.TABLE_OR_FIGURE, "Mott Table Appendix-3", [[S("s_u"), S("s_y")], ["SAE"]]),
+        (PathType.TABLE_OR_FIGURE, "Mott Figure 5-11", [[S("s_n")], [S("s_u"), "surface condition"]]),
+        (PathType.EQUATION, "Mott pg-178", Geqn(S("C_m"), 1)),
+        (PathType.EQUATION, "Mott pg-178", Geqn(S("C_{st}"), 1)),
+        (PathType.TABLE_OR_FIGURE, "Mott Table 5-3", [[S("C_R")], ["Reliability"]]),
+        (PathType.MOCK_TABLE_OR_FIGURE, "Mott Figure 5-12", [[S("C_s")], [S("D_{iter}")]], cs_mock),
+        (PathType.EQUATION, "Mott 5-21", Geqn(S("s_n'"), S("s_n")*S("C_m")*S("C_{st}")*S("C_R")*S("C_s"))),
+
+        (PathType.CUSTOM, "Shear Wrapper", [[S("D_{min\\,s}")], [S("K_t"), S("V"), S("N"), S("s_n'")]], shear_wrapper),
+        (PathType.CUSTOM, "Moment Wrapper", [[S("D_{min\\,t}")], [S("K_t"), S("M"), S("T"), S("N"), S("s_n'"), S("s_y")]], moment_wrapper),
+
+        (PathType.EQUATION, "Pick Maximum", Geqn(
+            S("D_{min}"),
+            sym.Max(S("D_{min\\,s}"), S("D_{min\\,t}"))
+        )),
+
+        (PathType.CUSTOM, "Diameter Iteration", [[S("D")], [S("D_{iter}"), S("D_{min}")]], diameter_iteration)
+    ]
+
+    return pathways
+
 #################################################################
 #                                                               #
 # Below this line is the core python code that solves problems  #
@@ -1578,7 +1653,7 @@ def solve_pathway(pathway, knowns):
         unknown = unknowns[0]
 
         expression = sym.solve(pathway[2], unknown)[0]
-        direct_latex = sym.latex(unknown) + " &= " + sym.latex(expression, order=None)
+        direct_latex = sym.latex(unknown) + " &= " + sym.latex(touch(expression), order=None) + f"\\tag{{{pathway[1]}}}"
 
         substitution_dict = {}
         for known in knowns:
@@ -1588,14 +1663,14 @@ def solve_pathway(pathway, knowns):
         with sym.evaluate(False):
 
             subbed_expression = expression.subs({key: round_nsig(float(substitution_dict[key]), 5) for key in substitution_dict})
-            subbed_latex = sym.latex(unknown) + " &= " + sym.latex(subbed_expression)
+            subbed_latex = sym.latex(unknown) + " &= " + sym.latex(touch(subbed_expression))
 
-        latex_entry = r"\begin{align*}"+"\n"
-        latex_entry += "    "+direct_latex + r"\\"+"\n"
+        latex_entry = r"\begin{align*}"
+        latex_entry += "\n    "+direct_latex
         if len(symbols_in_eqn) > 1:
-            latex_entry += "    "+subbed_latex+r"\\"+"\n"
-            latex_entry += "    "+sym.latex(touch(sym.Eq(unknown, knowns[unknown]))).replace("=", "&=") + "\n"
-        latex_entry += r"\end{align*}"
+            latex_entry += r"\\"+"\n    "+subbed_latex
+            latex_entry += r"\\"+"\n    "+sym.latex(touch(sym.Eq(unknown, knowns[unknown]))).replace("=", "&=")
+        latex_entry += "\n"+r"\end{align*}"
 
         return [latex_entry]
 
@@ -1631,6 +1706,29 @@ def solve_pathway(pathway, knowns):
         return_string += substring
         return [return_string]
 
+    # if is a mock of a table, evaluate with the mock.
+    if pathway[0] == PathType.MOCK_TABLE_OR_FIGURE:
+        substring = ', '.join([
+            f'${sym.latex(symbol)} = {round_nsig(knowns[symbol],3)} $'
+            if isinstance(symbol, sym.Expr) else
+            f'$\\text{{{symbol}}} = \\text{{{knowns[symbol]}}} $'
+            for symbol in pathway[2][1]])
+
+        return_string = f"Query {pathway[1]} with {substring}: "
+
+        new_knowledge = [a for a in pathway[2][0] if not a in knowns]
+
+        pathway[3](knowns)
+
+        substring = "\n"+'\n'.join([
+            f'$${sym.latex(symbol)} = {knowns[symbol]} $$'
+            if isinstance(symbol, sym.Expr)
+            else f'$$\\text{{{symbol}}} = {knowns[symbol]} $$'
+            for symbol in new_knowledge])
+
+        return_string += substring
+        return [return_string]
+
     # if conditional, recursion it.
     if pathway[0] == PathType.CUSTOM:
 
@@ -1660,8 +1758,8 @@ def query_pathways(context):
         pathways = retrieve_bcbearingall_information()
     elif (context["component_type"] == ComponentType.TAPERED_ROLLER_BEARING):
         pathways = retrieve_tbeaing_information()
-    elif (context["component_type"] == ComponentType.SHAFTS_AND_KEY):
-        pathways = retrieve_shaft_information()
+    elif (context["component_type"] == ComponentType.SHAFT_POINT):
+        pathways = retrieve_shaft_point_information_mott()
     else:
         raise NotImplementedError("not implemented")
     return pathways
@@ -1702,7 +1800,7 @@ def list_vars(context):
     return text_vars, symbolic_vars
 
 
-def analyze(context):
+def analyze(context, is_full_problem=True):
 
     pathways = query_pathways(context)
 
@@ -1728,7 +1826,9 @@ def analyze(context):
             pathway = pathways[i]
             path_type = pathway[0]
 
-            if path_type == PathType.TABLE_OR_FIGURE or path_type == PathType.CUSTOM:
+            if (path_type == PathType.TABLE_OR_FIGURE or
+                path_type == PathType.MOCK_TABLE_OR_FIGURE or
+                    path_type == PathType.CUSTOM):
                 symbols_retrievable = pathway[2][0]
                 symbols_needed = pathway[2][1]
 
@@ -1772,7 +1872,7 @@ def analyze(context):
     # start solving and removing extra branches
     knowns = context["vars"]
 
-    latex_output = []
+    logs = []
 
     target_stack = context["targets"].copy()
     target_stack.reverse()
@@ -1789,7 +1889,9 @@ def analyze(context):
         path_type = pathway[0]
         solvable = True
 
-        if path_type == PathType.TABLE_OR_FIGURE or path_type == PathType.CUSTOM:
+        if (path_type == PathType.TABLE_OR_FIGURE or
+            path_type == PathType.MOCK_TABLE_OR_FIGURE or
+                path_type == PathType.CUSTOM):
             symbols_needed = pathway[2][1]
 
             # if cannot solve yet, no need to continue.
@@ -1812,31 +1914,36 @@ def analyze(context):
             continue
 
         # if solvable
-        latex_output += solve_pathway(pathway, knowns)
-        target_stack.pop()
+        logs += solve_pathway(pathway, knowns)
 
-    summary_lines = "Final Design Parameters:\\\\\n"
-    summary_lines += "\\begin{tabular}{lll}\n"
-    for target in context["targets"]:
-        if isinstance(target, sym.Expr):
-            summary_lines += f"    ${sym.latex(target)}$ & : & {round_nsig(knowns[target],3)}\\\\\n"
-        else:
-            summary_lines += f"    {target} & : & {knowns[target]}\\\\\n"
-    summary_lines += "\\end{tabular}"
-    latex_output.append(summary_lines)
+    if (is_full_problem):
+        summary_lines = "\nFinal Design Parameters:\\\\"
+        summary_lines += "\n\\begin{tabular}{lll}"
+        for target in context["targets"]:
+            if isinstance(target, sym.Expr):
+                summary_lines += f"\n    ${sym.latex(target)}$ & : & {round_nsig(knowns[target],3)}"+r"\\"
+            else:
+                summary_lines += f"\n    {target} & : & {knowns[target]}"+r"\\"
+        summary_lines += "\n\\end{tabular}"
+        logs.append(summary_lines)
 
-    with open(join("latex_output", "solution.tex"), "w+") as fi:
-        fi.write("\n\n".join(latex_output))
-
-    print("Solution Output Successful")
-
-    return vars
+    return logs
 
 
-def compile_latex():
+def compile_latex(logs):
     import subprocess
     import os
     from os.path import join
+    import re
+
+    latex_output = "\n\n".join(logs)
+    # remove space between slign blocks
+    latex_output = re.sub(r"\\end\{align\*\}\n\n\\begin\{align\*\}", r"\\end{align*}\n\\begin{align*}", latex_output)
+    with open(join("latex_output", "solution.tex"), "w+") as fi:
+        fi.write(latex_output)
+
+    print("Solution Output Successful")
+
     print("Compiling Latex into PDF format.")
     subprocess.Popen(
         "pdflatex -output-directory=aux main.tex",

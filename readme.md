@@ -63,11 +63,9 @@ Features:
 | BALL AND CYLINDRICAL BEARING ALL | Clearance      |               |               |               |
 | TAPER BEARING     | Selection                     |  x            |  x            |  x            |
 | TAPER BEARING     | Clearance                     |               |               |               |
-| SHAFT AND KEY     | Force Balance                 |  x            |  x            |               |
-| SHAFT AND KEY     | Visualization                 |  x            |  x            |               |
-| SHAFT AND KEY     | Call other Component          |               |               |               |
-| SHAFT AND KEY     | Stress analysis               | x             |               |               |
-| SHAFT AND KEY     | Diameter Selection            |               |               |               |
+| SHAFT             |                               |  x            |  x            |               |
+| SHAFT             | Diameter Selection            |  x            |               |               |
+| KEY               |                               |               |               |               |
 | POWER SCREW       |                               |               |               |               |
 | BALL SCREW        |                               |               |               |               |
 | SPRINGS           |                               |               |               |               |

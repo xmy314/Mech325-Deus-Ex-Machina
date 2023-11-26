@@ -4,7 +4,7 @@ from enum import Enum
 from math import radians, copysign
 from sympy import sin, cos, tan, sqrt
 from os.path import join
-from infrastructure import round_nsig, ComponentType, analyze
+from infrastructure import round_nsig, ComponentType, analyze, compile_latex
 
 # This file is for force balancing on a shaft.
 # Input forces in terms of z along shaft and use components x y or in terms of standard angle in x y plane.
@@ -170,13 +170,13 @@ def solve_reaction_force(context):
         if isinstance(expr, sym.Expr):
             all_vars += expr.free_symbols
 
-    if not "vars" in context:
-        context["vars"] = {}
+    if not "loading vars" in context:
+        context["loading vars"] = {}
 
-    targets = [v for v in all_vars if not v in context["vars"]]
+    targets = [v for v in all_vars if not v in context["loading vars"]]
 
     result = sym.solve(exprs, targets, dict=True)
-    context["vars"].update(result[0])
+    context["loading vars"].update(result[0])
     for load in loads:
         for i in range(3):
             if not isinstance(load[3][i], sym.Expr):
@@ -184,7 +184,7 @@ def solve_reaction_force(context):
             expr = load[3][i]
             sub_dict = {}
             for symbol in expr.free_symbols:
-                sub_dict[symbol] = context["vars"][symbol]
+                sub_dict[symbol] = context["loading vars"][symbol]
             load[3][i] = expr.evalf(subs=sub_dict)
 
     log = r"\begin{align*}"+"\n"
@@ -359,16 +359,17 @@ def shaft_analysis(context):
     maximum_value = [0.0001 for i in range(8)]
 
     # fx fy are shear, fz is compression, mx, my are moments, mz is torsion.
-    beam_segments = [(0, (0, 0, 0, 0, 0, 0, 0, 0), (0, 0, 0, 0, 0, 0, 0, 0))]  # z, v(z-), v(z).
+    previous_beam_segment = (0, (0, 0, 0, 0, 0, 0, 0, 0), (0, 0, 0, 0, 0, 0, 0, 0))
+    beam_segments = []  # z, v(z-), v(z).
 
     for key_point in key_points:
 
-        rfx_expr = beam_segments[-1][2][0]+sym.integrate(0, S("z")).subs({S("z"): S("z")-beam_segments[-1][0]})   # 0 for not supporting distributed load
-        rfy_expr = beam_segments[-1][2][1]+sym.integrate(0, S("z")).subs({S("z"): S("z")-beam_segments[-1][0]})   # 0 for not supporting distributed load
-        rfz_expr = beam_segments[-1][2][2]+sym.integrate(0, S("z")).subs({S("z"): S("z")-beam_segments[-1][0]})   # 0 for not supporting distributed load
-        rmx_expr = beam_segments[-1][2][3]+sym.integrate(rfx_expr, S("z")).subs({S("z"): S("z")-beam_segments[-1][0]})
-        rmy_expr = beam_segments[-1][2][4]+sym.integrate(rfy_expr, S("z")).subs({S("z"): S("z")-beam_segments[-1][0]})
-        rmz_expr = beam_segments[-1][2][5]+sym.integrate(0, S("z")).subs({S("z"): S("z")-beam_segments[-1][0]})   # 0 for not supporting distributed load
+        rfx_expr = previous_beam_segment[2][0]+sym.integrate(0, S("z")).subs({S("z"): S("z")-previous_beam_segment[0]})   # 0 for not supporting distributed load
+        rfy_expr = previous_beam_segment[2][1]+sym.integrate(0, S("z")).subs({S("z"): S("z")-previous_beam_segment[0]})   # 0 for not supporting distributed load
+        rfz_expr = previous_beam_segment[2][2]+sym.integrate(0, S("z")).subs({S("z"): S("z")-previous_beam_segment[0]})   # 0 for not supporting distributed load
+        rmx_expr = previous_beam_segment[2][3]+sym.integrate(rfx_expr, S("z")).subs({S("z"): S("z")-previous_beam_segment[0]})
+        rmy_expr = previous_beam_segment[2][4]+sym.integrate(rfy_expr, S("z")).subs({S("z"): S("z")-previous_beam_segment[0]})
+        rmz_expr = previous_beam_segment[2][5]+sym.integrate(0, S("z")).subs({S("z"): S("z")-previous_beam_segment[0]})   # 0 for not supporting distributed load
         rfxy_expr = sym.sqrt(rfx_expr**2+rfy_expr**2)
         rmxy_expr = sym.sqrt(rmx_expr**2+rmy_expr**2)
 
@@ -384,7 +385,7 @@ def shaft_analysis(context):
         beam_segments.append((
             key_point[0],
             (rfx_expr, rfy_expr, rfz_expr, rmx_expr, rmy_expr, rmz_expr, rfxy_expr, rmxy_expr),
-            (rfx_accu, rfy_accu, rfz_accu, rmx_accu, rmy_accu, rmz_accu, rfxy_accu, rfxy_expr),
+            (rfx_accu, rfy_accu, rfz_accu, rmx_accu, rmy_accu, rmz_accu, rfxy_accu, rmxy_accu),
         ))
 
         maximum_value = [
@@ -395,8 +396,10 @@ def shaft_analysis(context):
             max(maximum_value[4], abs(rmy_expr.evalf(subs={S("z"): key_point[0]})), abs(rmy_accu)),
             max(maximum_value[5], abs(rmz_expr.evalf(subs={S("z"): key_point[0]})), abs(rmz_accu)),
             max(maximum_value[6], abs(rfxy_expr.evalf(subs={S("z"): key_point[0]})), abs(rfxy_accu)),
-            max(maximum_value[7], abs(rmxy_expr.evalf(subs={S("z"): key_point[0]})), abs(rfxy_expr)),
+            max(maximum_value[7], abs(rmxy_expr.evalf(subs={S("z"): key_point[0]})), abs(rmxy_accu)),
         ]
+
+        previous_beam_segment = beam_segments[-1]
 
     normalized_unit = [v/1.8 for v in maximum_value]
 
@@ -434,8 +437,121 @@ def shaft_analysis(context):
     return ret2d
 
 
-# Unit for length, force, and moment are not important as long as
-# unit length cross unit force = unit moment.
+def divide_and_conquer(context):
+    logs = []
+    summary = {}
+    stress_concentration_factor = {
+        "ring": 3,
+        "sharp fillet": 1.5,
+        "large fillet": 2.5,
+        "profile": 2,
+        "sled runner": 1.6,
+    }
+    for component in context["components"]:
+        summary[component["name"]] = {}
+        for z, vzl, vzr in context["internal"]:
+            if z == component["z"]:
+                TL = vzl[5] if not isinstance(vzl[5], sym.Expr) else vzl[5].evalf(subs={S("z"): z})
+                VL = vzl[6] if not isinstance(vzl[6], sym.Expr) else vzl[6].evalf(subs={S("z"): z})
+                ML = vzl[7] if not isinstance(vzl[7], sym.Expr) else vzl[7].evalf(subs={S("z"): z})
+                TR = vzr[5]
+                VR = vzr[6]
+                MR = vzr[7]
+                TL = 0 if abs(TL) < 0.1**5 else TL
+                VL = 0 if abs(VL) < 0.1**5 else VL
+                ML = 0 if abs(ML) < 0.1**5 else ML
+                TR = 0 if abs(TR) < 0.1**5 else TR
+                VR = 0 if abs(VR) < 0.1**5 else VR
+                MR = 0 if abs(MR) < 0.1**5 else MR
+                break
+
+        # solve left side
+        logs.append(f'Solving for the minimum diameter on the left of point {component["name"]}')
+        subproblem = {}
+        subproblem["component_type"] = ComponentType.SHAFT_POINT
+        subproblem["vars"] = context["vars"].copy()
+        subproblem["targets"] = [S("D")]
+
+        if not "left feature" in component:
+            subproblem["vars"][S("K_t")] = 1
+        else:
+            subproblem["vars"][S("K_t")] = stress_concentration_factor[component["left feature"]]
+
+        subproblem["vars"][S("V")] = VL
+        subproblem["vars"][S("M")] = ML
+        subproblem["vars"][S("T")] = TL
+        logs += analyze(subproblem, False)
+        summary[component["name"]]["left"] = sym.N(subproblem["vars"][S("D_{min}")])
+        if "left feature" in component and component["left feature"] == "ring":
+            summary[component["name"]]["left"] = 1.06*summary[component["name"]]["left"]
+
+        # solve center
+        logs.append(f'Solving for the minimum diameter at point {component["name"]}')
+        subproblem = {}
+        subproblem["component_type"] = ComponentType.SHAFT_POINT
+        subproblem["vars"] = context["vars"].copy()
+        subproblem["targets"] = [S("D")]
+
+        if not "middle feature" in component:
+            subproblem["vars"][S("K_t")] = 1
+        else:
+            subproblem["vars"][S("K_t")] = stress_concentration_factor[component["middle feature"]]
+
+        subproblem["vars"][S("V")] = max(VL, VR)
+        subproblem["vars"][S("M")] = max(ML, MR)
+        subproblem["vars"][S("T")] = max(TL, TR)
+        logs += analyze(subproblem, False)
+        summary[component["name"]]["middle"] = sym.N(subproblem["vars"][S("D_{min}")])
+        if "middle feature" in component and component["left feature"] == "ring":
+            summary[component["name"]]["middle"] = 1.06*summary[component["name"]]["middle"]
+
+        # solve rightside
+        logs.append(f'Solving for the minimum diameter on the right of point {component["name"]}')
+        subproblem = {}
+        subproblem["component_type"] = ComponentType.SHAFT_POINT
+        subproblem["vars"] = context["vars"].copy()
+        subproblem["targets"] = [S("D")]
+
+        if not "right feature" in component:
+            subproblem["vars"][S("K_t")] = 1
+        else:
+            subproblem["vars"][S("K_t")] = stress_concentration_factor[component["right feature"]]
+
+        subproblem["vars"][S("V")] = VR
+        subproblem["vars"][S("M")] = MR
+        subproblem["vars"][S("T")] = TR
+        logs += analyze(subproblem, False)
+        summary[component["name"]]["right"] = sym.N(subproblem["vars"][S("D_{min}")])
+        if "right feature" in component and component["left feature"] == "ring":
+            summary[component["name"]]["right"] = 1.06*summary[component["name"]]["right"]
+
+        summary[component["name"]]["overall"] = max(summary[component["name"]]["left"], summary[component["name"]]["middle"], summary[component["name"]]["right"])
+
+        logs.append(f'The minimum diameters at {component["name"]} are {summary[component["name"]]["left"]:7.2f}, {summary[component["name"]]["middle"]:7.2f}, {summary[component["name"]]["right"]:7.2f}.')
+        logs.append(f'Thus, the minimum diameter at {component["name"]} is {summary[component["name"]]["overall"]:7.2f}.')
+
+    logs.append(f'Along the axis of the shaft:\n')
+    for component in context["components"]:
+        log_block = []
+        log_block.append("\\begin{align*}")
+        log_block.append(f'    D_{{{component["name"]}L}} &= {summary[component["name"]]["left"]:7.2f}\\\\')
+        log_block.append(f'    D_{{{component["name"]}M}} &= {summary[component["name"]]["middle"]:7.2f}\\\\')
+        log_block.append(f'    D_{{{component["name"]}R}} &= {summary[component["name"]]["right"]:7.2f}\\\\')
+        log_block.append(f'    D_{{{component["name"]}}} &= {summary[component["name"]]["overall"]:7.2f}\\\\')
+        log_block.append("\\end{align*}")
+        logs.append("\n".join(log_block))
+
+    logs.append(f'More compactly:')
+    log_block = []
+    log_block.append("\\begin{align*}")
+    for component in context["components"]:
+        log_block.append(f'    D_{component["name"]} &= {summary[component["name"]]["overall"]:7.2f}\\\\')
+    log_block.append("\\end{align*}")
+    logs.append("\n".join(log_block))
+
+    return logs
+
+
 context = {
     "components": [
         {
@@ -457,7 +573,7 @@ context = {
             "is driver": 0,
             "power": 0,
             "diameter": 0,
-            "left feature": "ring",
+            "left feature": "large fillet",
             "right feature": "sharp fillet",
         },
         {
@@ -468,8 +584,8 @@ context = {
             "is driver": 0,
             "power": 0,
             "diameter": 0,
-            "left feature": "shoulder",
-            "right feature": "sharp fillet",
+            "left feature": "sharp fillet",
+            "right feature": "large fillet",
         },
         {
             "component_type": ComponentType.SPUR_GEAR,
@@ -497,8 +613,16 @@ context = {
         },
     ],
     "vars": {
-        S("n"): 240,  # [RPM]
+        S("n"): 240,  # Shaft Rotation Rate [RPM]
+        S("N"): 3,  # Safety Factor typically between 2.5 to 3
         "rotation direction": -1,
+        "SAE": "1137 cold drawn",
+        "Reliability": "90%",
+        S("s_u"): 98000,  # [psi]
+        S("s_y"): 82000,  # [psi]
+        S("s_n"): 31000,  # [psi]
+        S("C_R"): 0.9,
+        "surface condition": "Machined or Cold Drawn",  # assumed typical case
     },
 }
 
@@ -507,6 +631,5 @@ logs.append(convert_component_to_load(context))
 logs.append(solve_reaction_force(context))
 logs.append(fbd3d(context))
 logs.append(shaft_analysis(context))
-
-with open(join("latex_output", "solution.tex"), "w+") as fi:
-    fi.write("\n\n".join(logs))
+logs += divide_and_conquer(context)
+compile_latex(logs)
