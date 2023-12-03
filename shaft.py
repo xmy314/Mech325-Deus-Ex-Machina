@@ -4,7 +4,7 @@ from enum import Enum
 from math import radians, copysign
 from sympy import sin, cos, tan, sqrt
 from os.path import join
-from infrastructure import round_nsig, ComponentType, analyze, compile_latex
+from infrastructure import round_nsig, ComponentType, analyze, compile_latex, touch
 
 # This file is for force balancing on a shaft.
 # Input forces in terms of z along shaft and use components x y or in terms of standard angle in x y plane.
@@ -447,6 +447,17 @@ def divide_and_conquer(context):
         "profile": 2,
         "sled runner": 1.6,
     }
+    context["component_type"] = ComponentType.SHAFT_POINT
+    context["targets"] = [
+        S("s_u"),
+        S("s_y"),
+        S("s_n"),
+        S("C_R"),
+    ]
+    logs += analyze(context, False)
+    context.pop("targets")
+    context.pop("component_type")
+
     for component in context["components"]:
         summary[component["name"]] = {}
         for z, vzl, vzr in context["internal"]:
@@ -470,7 +481,7 @@ def divide_and_conquer(context):
         subproblem = {}
         subproblem["component_type"] = ComponentType.SHAFT_POINT
         subproblem["vars"] = context["vars"].copy()
-        subproblem["targets"] = [S("D")]
+        subproblem["targets"] = [S("D_{req}")]
 
         if not "left feature" in component:
             subproblem["vars"][S("K_t")] = 1
@@ -481,16 +492,19 @@ def divide_and_conquer(context):
         subproblem["vars"][S("M")] = ML
         subproblem["vars"][S("T")] = TL
         logs += analyze(subproblem, False)
-        summary[component["name"]]["left"] = sym.N(subproblem["vars"][S("D_{min}")])
+        summary[component["name"]]["left"] = sym.N(subproblem["vars"][S("D_{req}")])
         if "left feature" in component and component["left feature"] == "ring":
-            summary[component["name"]]["left"] = 1.06*summary[component["name"]]["left"]
+            modified_diameter = 1.06*summary[component["name"]]["left"]
+            logs.append("Since a retaining ring is used, increase the diameter by 6%.")
+            logs.append(f'$$D_{{req}}=1.06 \cdot {touch(summary[component["name"]]["left"])} ={ touch(modified_diameter) }$$')
+            summary[component["name"]]["left"] = modified_diameter
 
         # solve center
         logs.append(f'Solving for the minimum diameter at point {component["name"]}')
         subproblem = {}
         subproblem["component_type"] = ComponentType.SHAFT_POINT
         subproblem["vars"] = context["vars"].copy()
-        subproblem["targets"] = [S("D")]
+        subproblem["targets"] = [S("D_{req}")]
 
         if not "middle feature" in component:
             subproblem["vars"][S("K_t")] = 1
@@ -501,16 +515,19 @@ def divide_and_conquer(context):
         subproblem["vars"][S("M")] = max(ML, MR)
         subproblem["vars"][S("T")] = max(TL, TR)
         logs += analyze(subproblem, False)
-        summary[component["name"]]["middle"] = sym.N(subproblem["vars"][S("D_{min}")])
-        if "middle feature" in component and component["left feature"] == "ring":
-            summary[component["name"]]["middle"] = 1.06*summary[component["name"]]["middle"]
+        summary[component["name"]]["middle"] = sym.N(subproblem["vars"][S("D_{req}")])
+        if "middle feature" in component and component["middle feature"] == "ring":
+            modified_diameter = 1.06*summary[component["name"]]["middle"]
+            logs.append("Since a retaining ring is used, increase the diameter by 6%.")
+            logs.append(f'$$D_{{req}}=1.06 \cdot {touch(summary[component["name"]]["middle"])} ={ touch(modified_diameter) }$$')
+            summary[component["name"]]["middle"] = modified_diameter
 
         # solve rightside
         logs.append(f'Solving for the minimum diameter on the right of point {component["name"]}')
         subproblem = {}
         subproblem["component_type"] = ComponentType.SHAFT_POINT
         subproblem["vars"] = context["vars"].copy()
-        subproblem["targets"] = [S("D")]
+        subproblem["targets"] = [S("D_{req}")]
 
         if not "right feature" in component:
             subproblem["vars"][S("K_t")] = 1
@@ -521,11 +538,16 @@ def divide_and_conquer(context):
         subproblem["vars"][S("M")] = MR
         subproblem["vars"][S("T")] = TR
         logs += analyze(subproblem, False)
-        summary[component["name"]]["right"] = sym.N(subproblem["vars"][S("D_{min}")])
-        if "right feature" in component and component["left feature"] == "ring":
-            summary[component["name"]]["right"] = 1.06*summary[component["name"]]["right"]
+        summary[component["name"]]["right"] = sym.N(subproblem["vars"][S("D_{req}")])
+        if "right feature" in component and component["right feature"] == "ring":
+            modified_diameter = 1.06*summary[component["name"]]["right"]
+            logs.append("Since a retaining ring is used here, increase the diameter by 6%.")
+            logs.append(f'$$D_{{req}}=1.06 \cdot {touch(summary[component["name"]]["right"])} ={ touch(modified_diameter) }$$')
+            summary[component["name"]]["right"] = modified_diameter
 
         summary[component["name"]]["overall"] = max(summary[component["name"]]["left"], summary[component["name"]]["middle"], summary[component["name"]]["right"])
+
+        component["shaft min diameter"] = summary[component["name"]]["overall"]
 
         logs.append(f'The minimum diameters at {component["name"]} are {summary[component["name"]]["left"]:7.2f}, {summary[component["name"]]["middle"]:7.2f}, {summary[component["name"]]["right"]:7.2f}.')
         logs.append(f'Thus, the minimum diameter at {component["name"]} is {summary[component["name"]]["overall"]:7.2f}.')
@@ -563,7 +585,9 @@ context = {
             "power": 10,  # [hp]
             "diameter": 12,
             "left feature": "ring",
+            "center feature": "sled runner",
             "right feature": "ring",
+            "secured by": ComponentType.KEY,
         },
         {
             "component_type": ComponentType.BALL_AND_CYLINDRICAL_BEARING_RADIAL,
@@ -575,6 +599,7 @@ context = {
             "diameter": 0,
             "left feature": "large fillet",
             "right feature": "sharp fillet",
+            "secured by": ComponentType.KEY,
         },
         {
             "component_type": ComponentType.BALL_AND_CYLINDRICAL_BEARING_RADIAL,
@@ -598,6 +623,7 @@ context = {
             "diameter": 8,
             "pressure angle": radians(20),
             "left feature": "ring",
+            "center feature": "sled runner",
             "right feature": "ring",
         },
         {
@@ -609,7 +635,9 @@ context = {
             "power": sym.Integer(5),
             "diameter": 6,
             "left feature": "ring",
+            "center feature": "sled runner",
             "right feature": "ring",
+            "secured by": ComponentType.KEY,
         },
     ],
     "vars": {
@@ -617,11 +645,7 @@ context = {
         S("N"): 3,  # Safety Factor typically between 2.5 to 3
         "rotation direction": -1,
         "SAE": "1137 cold drawn",
-        "Reliability": "90%",
-        S("s_u"): 98000,  # [psi]
-        S("s_y"): 82000,  # [psi]
-        S("s_n"): 31000,  # [psi]
-        S("C_R"): 0.9,
+        "Reliability": "0.99",
         "surface condition": "Machined or Cold Drawn",  # assumed typical case
     },
 }
@@ -632,4 +656,5 @@ logs.append(solve_reaction_force(context))
 logs.append(fbd3d(context))
 logs.append(shaft_analysis(context))
 logs += divide_and_conquer(context)
+
 compile_latex(logs)
