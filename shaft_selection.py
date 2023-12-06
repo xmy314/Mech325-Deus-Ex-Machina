@@ -27,6 +27,9 @@ def convert_component_to_load(context):
     n = context["vars"][S("n")]
     loads = []
     for component in components:
+        if component["component_type"] == ComponentType.CUSTOM:
+            loads.append(component["load"])
+            continue
         driving = component["is driver"]
         radius = component["diameter"]/2
         torque = 63025*component["power"]/n
@@ -55,6 +58,12 @@ def convert_component_to_load(context):
             rf_pair.append((
                 (0, -rotation_direction*driving*radius, component["z"]),
                 ((1/(K-1))*nominal_force, 0, 0)
+            ))
+        elif component["component_type"] == ComponentType.SYNCHRONOUS_BELT:
+            # tight side
+            rf_pair.append((
+                (0, rotation_direction*driving*radius, component["z"]),
+                (nominal_force, 0, 0)
             ))
         elif component["component_type"] == ComponentType.CHAIN:
             # tight side
@@ -416,7 +425,7 @@ def shaft_analysis(context):
                 z = (next_point[0]-this_point[0])*(k)/20+this_point[0]
                 v = next_point[1][i].evalf(subs={S("z"): z})
                 if (k == 0 or k == 20) and abs(v-last_tag) >= 0.01*normalized_unit[i] and abs(v) >= 0.01*normalized_unit[i]:
-                    ret2d[graph_i] += f"--({z/normalized_unit_axial_length},{v/normalized_unit[i]}) node[above right] {{{round_nsig(v,5):5.0f}}} "
+                    ret2d[graph_i] += f"--({z/normalized_unit_axial_length},{v/normalized_unit[i]}) node[above right] {{{round_nsig(v,3)}}} "
                     last_tag = v
                 else:
                     ret2d[graph_i] += f"--({z/normalized_unit_axial_length},{v/normalized_unit[i]}) "
@@ -446,6 +455,7 @@ def divide_and_conquer(context):
         "large fillet": 2.5,
         "profile": 2,
         "sled runner": 1.6,
+        "none": 1
     }
     context["component_type"] = ComponentType.SHAFT_POINT
     context["targets"] = [
@@ -462,12 +472,12 @@ def divide_and_conquer(context):
         summary[component["name"]] = {}
         for z, vzl, vzr in context["internal"]:
             if z == component["z"]:
-                TL = vzl[5] if not isinstance(vzl[5], sym.Expr) else vzl[5].evalf(subs={S("z"): z})
-                VL = vzl[6] if not isinstance(vzl[6], sym.Expr) else vzl[6].evalf(subs={S("z"): z})
-                ML = vzl[7] if not isinstance(vzl[7], sym.Expr) else vzl[7].evalf(subs={S("z"): z})
-                TR = vzr[5]
-                VR = vzr[6]
-                MR = vzr[7]
+                TL = abs(vzl[5] if not isinstance(vzl[5], sym.Expr) else vzl[5].evalf(subs={S("z"): z}))
+                VL = abs(vzl[6] if not isinstance(vzl[6], sym.Expr) else vzl[6].evalf(subs={S("z"): z}))
+                ML = abs(vzl[7] if not isinstance(vzl[7], sym.Expr) else vzl[7].evalf(subs={S("z"): z}))
+                TR = abs(vzr[5])
+                VR = abs(vzr[6])
+                MR = abs(vzr[7])
                 TL = 0 if abs(TL) < 0.1**5 else TL
                 VL = 0 if abs(VL) < 0.1**5 else VL
                 ML = 0 if abs(ML) < 0.1**5 else ML
@@ -477,27 +487,31 @@ def divide_and_conquer(context):
                 break
 
         # solve left side
-        logs.append(f'Solving for the minimum diameter on the left of point {component["name"]}')
-        subproblem = {}
-        subproblem["component_type"] = ComponentType.SHAFT_POINT
-        subproblem["vars"] = context["vars"].copy()
-        subproblem["targets"] = [S("D_{req}")]
-
-        if not "left feature" in component:
-            subproblem["vars"][S("K_t")] = 1
+        if (component["left feature"] == "none"):
+            logs.append(f"As there is no feature on the left, there is no need to analyze the left side separately")
+            summary[component["name"]]["left"] = 0
         else:
-            subproblem["vars"][S("K_t")] = stress_concentration_factor[component["left feature"]]
+            logs.append(f'Solving for the minimum diameter on the left of point {component["name"]}')
+            subproblem = {}
+            subproblem["component_type"] = ComponentType.SHAFT_POINT
+            subproblem["vars"] = context["vars"].copy()
+            subproblem["targets"] = [S("D_{req}")]
 
-        subproblem["vars"][S("V")] = VL
-        subproblem["vars"][S("M")] = ML
-        subproblem["vars"][S("T")] = TL
-        logs += analyze(subproblem, False)
-        summary[component["name"]]["left"] = sym.N(subproblem["vars"][S("D_{req}")])
-        if "left feature" in component and component["left feature"] == "ring":
-            modified_diameter = 1.06*summary[component["name"]]["left"]
-            logs.append("Since a retaining ring is used, increase the diameter by 6%.")
-            logs.append(f'$$D_{{req}}=1.06 \cdot {touch(summary[component["name"]]["left"])} ={ touch(modified_diameter) }$$')
-            summary[component["name"]]["left"] = modified_diameter
+            if not "left feature" in component:
+                subproblem["vars"][S("K_t")] = 1
+            else:
+                subproblem["vars"][S("K_t")] = stress_concentration_factor[component["left feature"]]
+
+            subproblem["vars"][S("V")] = VL
+            subproblem["vars"][S("M")] = ML
+            subproblem["vars"][S("T")] = TL
+            logs += analyze(subproblem, False)
+            summary[component["name"]]["left"] = sym.N(subproblem["vars"][S("D_{req}")])
+            if "left feature" in component and component["left feature"] == "ring":
+                modified_diameter = 1.06*summary[component["name"]]["left"]
+                logs.append("Since a retaining ring is used, increase the diameter by 6%.")
+                logs.append(f'$$D_{{req}}=1.06 \cdot {touch(summary[component["name"]]["left"])} ={ touch(modified_diameter) }$$')
+                summary[component["name"]]["left"] = modified_diameter
 
         # solve center
         logs.append(f'Solving for the minimum diameter at point {component["name"]}')
@@ -523,27 +537,31 @@ def divide_and_conquer(context):
             summary[component["name"]]["middle"] = modified_diameter
 
         # solve rightside
-        logs.append(f'Solving for the minimum diameter on the right of point {component["name"]}')
-        subproblem = {}
-        subproblem["component_type"] = ComponentType.SHAFT_POINT
-        subproblem["vars"] = context["vars"].copy()
-        subproblem["targets"] = [S("D_{req}")]
-
-        if not "right feature" in component:
-            subproblem["vars"][S("K_t")] = 1
+        if (component["right feature"] == "none"):
+            logs.append(f"As there is no feature on the right, there is no need to analyze the right side separately")
+            summary[component["name"]]["right"] = 0
         else:
-            subproblem["vars"][S("K_t")] = stress_concentration_factor[component["right feature"]]
+            logs.append(f'Solving for the minimum diameter on the right of point {component["name"]}')
+            subproblem = {}
+            subproblem["component_type"] = ComponentType.SHAFT_POINT
+            subproblem["vars"] = context["vars"].copy()
+            subproblem["targets"] = [S("D_{req}")]
 
-        subproblem["vars"][S("V")] = VR
-        subproblem["vars"][S("M")] = MR
-        subproblem["vars"][S("T")] = TR
-        logs += analyze(subproblem, False)
-        summary[component["name"]]["right"] = sym.N(subproblem["vars"][S("D_{req}")])
-        if "right feature" in component and component["right feature"] == "ring":
-            modified_diameter = 1.06*summary[component["name"]]["right"]
-            logs.append("Since a retaining ring is used here, increase the diameter by 6%.")
-            logs.append(f'$$D_{{req}}=1.06 \cdot {touch(summary[component["name"]]["right"])} ={ touch(modified_diameter) }$$')
-            summary[component["name"]]["right"] = modified_diameter
+            if not "right feature" in component:
+                subproblem["vars"][S("K_t")] = 1
+            else:
+                subproblem["vars"][S("K_t")] = stress_concentration_factor[component["right feature"]]
+
+            subproblem["vars"][S("V")] = VR
+            subproblem["vars"][S("M")] = MR
+            subproblem["vars"][S("T")] = TR
+            logs += analyze(subproblem, False)
+            summary[component["name"]]["right"] = sym.N(subproblem["vars"][S("D_{req}")])
+            if "right feature" in component and component["right feature"] == "ring":
+                modified_diameter = 1.06*summary[component["name"]]["right"]
+                logs.append("Since a retaining ring is used here, increase the diameter by 6%.")
+                logs.append(f'$$D_{{req}}=1.06 \cdot {touch(summary[component["name"]]["right"])} ={ touch(modified_diameter) }$$')
+                summary[component["name"]]["right"] = modified_diameter
 
         summary[component["name"]]["overall"] = max(summary[component["name"]]["left"], summary[component["name"]]["middle"], summary[component["name"]]["right"])
 
@@ -572,16 +590,3 @@ def divide_and_conquer(context):
     logs.append("\n".join(log_block))
 
     return logs
-
-
-context = {
-}
-
-logs = []
-logs.append(convert_component_to_load(context))
-logs.append(solve_reaction_force(context))
-logs.append(fbd3d(context))
-logs.append(shaft_analysis(context))
-logs += divide_and_conquer(context)
-
-compile_latex(logs)
