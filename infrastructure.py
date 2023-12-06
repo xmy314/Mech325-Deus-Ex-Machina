@@ -383,19 +383,19 @@ def retrieve_spurgear_information():
 
         if knowns[S("F")] <= 1:
             knowns[S("C_{pf}")] = ratio/10-0.025
-            logs.append('\\begin{align*}')
-            logs.append(f'{S("C_{pf}")} &= \\frac{{\frac{{F}}{{D_{{in}}}}}}{{10}}-0.025\\\\')
-            logs.append(f'{S("C_{pf}")} &= {knowns[S("C_{pf}")]}\\\\')
-            logs.append('\end{align*}')
+            chunk = ('\\begin{align*}')
+            chunk += "\n"+(f'{S("C_{pf}")} &= \\frac{{\\frac{{F}}{{D_{{in}}}}}}{{10}}-0.025\\\\')
+            chunk += "\n"+(f'{S("C_{pf}")} &= {knowns[S("C_{pf}")]}\\\\')
+            chunk += "\n"+('\end{align*}')
         elif knowns[S("F")] <= 15:
             knowns[S("C_{pf}")] = ratio/10-0.0375+0.0125*knowns[S("F")]
-            logs.append('\begin{align*}')
-            logs.append(f'{S("C_{pf}")} &= \\frac{{\frac{{F}}{{D_{{in}}}}}}{{10}}-0.0375+0.0125 \cdot F\\\\')
-            logs.append(f'{S("C_{pf}")} &= {knowns[S("C_{pf}")]}\\\\')
-            logs.append('\end{align*}')
+            chunk = ('\begin{align*}')
+            chunk += "\n"+(f'{S("C_{pf}")} &= \\frac{{\\frac{{F}}{{D_{{in}}}}}}{{10}}-0.0375+0.0125 \cdot F\\\\')
+            chunk += "\n"+(f'{S("C_{pf}")} &= {knowns[S("C_{pf}")]}\\\\')
+            chunk += "\n"+('\end{align*}')
         else:
             raise Exception("Unexpected Face Width")
-
+        logs.append(chunk)
         return logs
 
     def compute_Cma(knowns):
@@ -580,19 +580,19 @@ def retrieve_helicalgear_information():
 
         if knowns[S("F")] <= 1:
             knowns[S("C_{pf}")] = ratio/10-0.025
-            logs.append('\\begin{align*}')
-            logs.append(f'{S("C_{pf}")} &= \\frac{{\frac{{F}}{{D_{{in}}}}}}{{10}}-0.025\\\\')
-            logs.append(f'{S("C_{pf}")} &= {knowns[S("C_{pf}")]}\\\\')
-            logs.append('\end{align*}')
+            chunk = ('\\begin{align*}')
+            chunk += "\n"+(f'{S("C_{pf}")} &= \\frac{{\\frac{{F}}{{D_{{in}}}}}}{{10}}-0.025\\\\')
+            chunk += "\n"+(f'{S("C_{pf}")} &= {knowns[S("C_{pf}")]}\\\\')
+            chunk += "\n"+('\end{align*}')
         elif knowns[S("F")] <= 15:
             knowns[S("C_{pf}")] = ratio/10-0.0375+0.0125*knowns[S("F")]
-            logs.append('\begin{align*}')
-            logs.append(f'{S("C_{pf}")} &= \\frac{{\frac{{F}}{{D_{{in}}}}}}{{10}}-0.0375+0.0125 \cdot F\\\\')
-            logs.append(f'{S("C_{pf}")} &= {knowns[S("C_{pf}")]}\\\\')
-            logs.append('\end{align*}')
+            chunk = ('\begin{align*}')
+            chunk += "\n"+(f'{S("C_{pf}")} &= \\frac{{\\frac{{F}}{{D_{{in}}}}}}{{10}}-0.0375+0.0125 \cdot F\\\\')
+            chunk += "\n"+(f'{S("C_{pf}")} &= {knowns[S("C_{pf}")]}\\\\')
+            chunk += "\n"+('\end{align*}')
         else:
             raise Exception("Unexpected Face Width")
-
+        logs.append(chunk)
         return logs
 
     def compute_Cma(knowns):
