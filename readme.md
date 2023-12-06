@@ -54,7 +54,7 @@ Features:
 | WIRE ROPE         |                               |  x            |  x            |               |
 | SPUR GEAR         |                               |  x            |  x            |               |
 | HELICAL GEAR      |                               |  x            |               |               |
-| BEVEL GEAR        |                               |  x            |               |               |
+| BEVEL GEAR        |                               |  x            |  x            |               |
 | WORM GEAR         |                               |  x            |               |               |
 | RACK PINION       |                               |               |               |               |
 | BUSHING           | Shigley Selection             |  x            |  x            |               |
