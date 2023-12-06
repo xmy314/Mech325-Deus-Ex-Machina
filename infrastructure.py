@@ -1711,12 +1711,11 @@ def solve_pathway(pathway, knowns):
             if isinstance(known, sym.Expr):
                 substitution_dict[known] = knowns[known]
         knowns[unknown] = expression.evalf(subs=substitution_dict)
-        with sym.evaluate(False):
-            try:
-                subbed_expression = expression.subs(substitution_dict)
-                subbed_latex = sym.latex(unknown) + " &= " + sym.latex(touch(subbed_expression))
-            except:
-                subbed_latex = sym.latex(unknown) + " &= " + str(knowns[unknown])
+
+        subbed_latex = sym.latex(touch(expression.subs({symbol_in_eqn: S("xxxxxx"+sym.latex(symbol_in_eqn)+"xxxxxx") for symbol_in_eqn in symbols_in_eqn})), order=None)
+        for symbol_in_eqn in symbols_in_eqn:
+            subbed_latex = subbed_latex.replace(sym.latex(S("xxxxxx"+sym.latex(symbol_in_eqn)+"xxxxxx")), f"\\left({round_nsig(knowns[symbol_in_eqn],5):.5g}\\right)")
+        subbed_latex = sym.latex(unknown) + " &= " + subbed_latex
 
         latex_entry = r"\begin{align*}"
         latex_entry += "\n    "+direct_latex
@@ -1753,9 +1752,9 @@ def solve_pathway(pathway, knowns):
 
         cv2.destroyAllWindows()
 
-        substring = ', '.join([f'${sym.latex(symbol)} = {round_nsig(knowns[symbol],3)} $' if isinstance(symbol, sym.Expr) else f'$\\text{{{symbol}}} = \\text{{{knowns[symbol]}}} $' for symbol in query_keys])
+        substring = ', '.join([f'${sym.latex(symbol)} = {round_nsig(knowns[symbol],3):.3g} $' if isinstance(symbol, sym.Expr) else f'$\\text{{{symbol}}} = \\text{{{knowns[symbol]}}} $' for symbol in query_keys])
         return_string = f"Query {pathway[1]} with {substring}: "
-        substring = "\n"+'\n'.join([f'$${sym.latex(symbol)} = {knowns[symbol]} $$' if isinstance(symbol, sym.Expr) else f'$$\\text{{{symbol}}} = {knowns[symbol]} $$' for symbol in new_knowledge])
+        substring = "\n"+'\n'.join([f'$${sym.latex(symbol)} = {knowns[symbol]:g} $$' if isinstance(symbol, sym.Expr) else f'$$\\text{{{symbol}}} = {knowns[symbol]} $$' for symbol in new_knowledge])
         return_string += substring
         return [return_string]
 
@@ -1774,7 +1773,7 @@ def solve_pathway(pathway, knowns):
         pathway[3](knowns)
 
         substring = "\n"+'\n'.join([
-            f'$${sym.latex(symbol)} = {touch(knowns[symbol])} $$'
+            f'$${sym.latex(symbol)} = {touch(knowns[symbol]):.3g} $$'
             if isinstance(symbol, sym.Expr)
             else f'$$\\text{{{symbol}}} = {knowns[symbol]} $$'
             for symbol in new_knowledge])
