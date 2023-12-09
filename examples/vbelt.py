@@ -1,4 +1,4 @@
-from infrastructure import *
+from mech325.infrastructure import *
 
 input_context = {
     "component_type": ComponentType.V_BELT,

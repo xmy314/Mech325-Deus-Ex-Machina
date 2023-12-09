@@ -1,12 +1,12 @@
-from infrastructure import *
+from mech325.infrastructure import *
 import sympy as sym
 
 # run this program to start logging information.
 # to exist, press control c.
 
 try:
-    from unit import descriptions
-    from unit import units
+    from mech325.unit import descriptions
+    from mech325.unit import units
     for s in ComponentType:
         if not s in descriptions:
             descriptions[s] = {}

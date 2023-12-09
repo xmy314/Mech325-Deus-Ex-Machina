@@ -37,9 +37,6 @@ Good Luck in MECH 325.
 General:
 - [ ] Refactor code to deal with iteration more effectively.
 
-DX:
-- [ ] Refactor code out of the 1700 line file.
-
 UX:
 - [ ] Use description and units of values in a meaningful way.
 
@@ -66,9 +63,10 @@ Features:
 | TAPER BEARING     | Selection                     |  x            |  x            |  x            |
 | TAPER BEARING     | Clearance                     |               |               |               |
 | SHAFT             |                               |  x            |  x            |               |
-| SHAFT             | Diameter Selection            |  x            |  x            |               |
 | KEY               |                               |  x            |  x            |               |
 | POWER SCREW       |                               |  x            |               |               |
 | BALL SCREW        |                               |               |               |               |
 | SPRINGS           |                               |               |               |               |
 | FASTENER AND BOLTS|                               |  x            |               |               |
+| BOLT JOINT        |                               |  x            |               |               |
+

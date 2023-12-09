@@ -1,4 +1,4 @@
-from infrastructure import *
+from mech325.infrastructure import *
 import sympy as sym
 
 input_context = {

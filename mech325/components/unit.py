@@ -1,4 +1,4 @@
-from infrastructure import ComponentType
+from mech325.infrastructure import ComponentType
 from sympy import Symbol as S
 descriptions = {
     ComponentType.TAPERED_ROLLER_BEARING: {

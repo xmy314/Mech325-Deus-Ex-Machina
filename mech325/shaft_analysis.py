@@ -4,7 +4,7 @@ from enum import Enum
 from math import radians, copysign
 from sympy import sin, cos, tan, sqrt
 from os.path import join
-from infrastructure import round_nsig, ComponentType, analyze, compile_latex, touch
+from mech325.infrastructure import round_nsig, ComponentType, analyze, compile_latex, touch
 
 # This file is for force balancing on a shaft.
 # Input forces in terms of z along shaft and use components x y or in terms of standard angle in x y plane.

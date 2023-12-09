@@ -1,4 +1,4 @@
-from infrastructure import *
+from mech325.infrastructure import *
 from math import radians
 
 input_context = {

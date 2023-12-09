@@ -1,4 +1,4 @@
-from infrastructure import *
+from mech325.infrastructure import *
 from shaft_selection import *
 context = {
     "components": [
