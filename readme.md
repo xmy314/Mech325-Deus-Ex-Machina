@@ -68,7 +68,7 @@ Features:
 | SHAFT             |                               |  x            |  x            |               |
 | SHAFT             | Diameter Selection            |  x            |  x            |               |
 | KEY               |                               |  x            |  x            |               |
-| POWER SCREW       |                               |               |               |               |
+| POWER SCREW       |                               |  x            |               |               |
 | BALL SCREW        |                               |               |               |               |
 | SPRINGS           |                               |               |               |               |
-| FASTENER AND BOLTS|                               |               |               |               |
+| FASTENER AND BOLTS|                               |  x            |               |               |
