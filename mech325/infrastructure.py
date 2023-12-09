@@ -214,6 +214,8 @@ def query_pathways(context):
     elif context["component_type"] == ComponentType.POWER_SCREWS:
         from mech325.components.single_bolt import retrieve_singlebolt_information
         pathways = retrieve_singlebolt_information()
+    elif context["component_type"] == ComponentType.CUSTOM:
+        pathways = context["pathways"]
     else:
         raise NotImplementedError("not implemented")
 
@@ -223,6 +225,10 @@ def query_pathways(context):
 def list_vars(context):
 
     vars = []
+    if context["component_type"] == ComponentType.CUSTOM:
+        print("no general data aviliable for custom component/question type, please check the implementation for more detail.")
+        return {}, {}
+
     pathways = query_pathways(context)
     for pathway in pathways:
         if pathway[0] == PathType.EQUATION:

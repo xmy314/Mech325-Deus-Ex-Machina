@@ -67,6 +67,6 @@ Features:
 | POWER SCREW       |                               |  x            |               |               |
 | BALL SCREW        |                               |               |               |               |
 | SPRINGS           |                               |               |               |               |
-| FASTENER AND BOLTS|                               |  x            |               |               |
-| BOLT JOINT        |                               |  x            |               |               |
+| BOLTS             |                               |  x            |               |               |
+| BOLT JOINT        |                               |  x            |  x            |               |
 
