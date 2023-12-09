@@ -1,5 +1,5 @@
-from mech325.infrastructure import *
-from shaft_selection import *
+from mech325.shaft_analysis import *
+
 context = {
     "components": [
         {
@@ -84,3 +84,12 @@ logs.append(shaft_analysis(context))
 logs += divide_and_conquer(context)
 
 compile_latex(logs)
+
+# Expected Output:
+# \begin{align*}
+#     D_A &=    1.00\\
+#     D_B &=    2.50\\
+#     D_C &=    3.56\\
+#     D_D &=    2.93\\
+#     D_E &=    0.81\\
+# \end{align*}
