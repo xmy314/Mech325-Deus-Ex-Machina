@@ -10,10 +10,12 @@ def retrieve_singlebolt_information():
         logs = []
         if knowns["series"] == "metric":
             logs += solve_pathway((PathType.TABLE_OR_FIGURE, "Shigley Table 8-1", [[S("p"), S("A_t")], [S("d")]]), knowns)
-            logs += solve_pathway((PathType.EQUATION, "Geometry", Geqn(S("N"), 1/S("p"))), knowns)
+            if not S("N") in knowns or not S("p") in knowns:
+                logs += solve_pathway((PathType.EQUATION, "Geometry", Geqn(S("N"), 1/S("p"))), knowns)
         else:
             logs += solve_pathway((PathType.TABLE_OR_FIGURE, "Shigley Table 8-2", [[S("N"), S("A_t")], [S("d")]]), knowns)
-            logs += solve_pathway((PathType.EQUATION, "Geometry", Geqn(S("p"), 1/S("N"))), knowns)
+            if not S("N") in knowns or not S("p") in knowns:
+                logs += solve_pathway((PathType.EQUATION, "Geometry", Geqn(S("p"), 1/S("N"))), knowns)
         return logs
 
     def round_L(knowns):
@@ -130,11 +132,11 @@ def retrieve_singlebolt_information():
     def get_strength(knowns):
         logs = []
         if "SAE" in knowns["grade"] or "grade" in knowns["grade"]:
-            logs += solve_pathway((PathType.TABLE_OR_FIGURE, "Shigley Equation 8-9", [[S("S_p"), S("S_{ut}")], ["grade"]]), knowns)
+            logs += solve_pathway((PathType.TABLE_OR_FIGURE, "Shigley Table 8-9", [[S("S_p"), S("S_{ut}")], ["grade"]]), knowns)
         elif "ASTM" in knowns["grade"] or "designation" in knowns["grade"]:
-            logs += solve_pathway((PathType.TABLE_OR_FIGURE, "Shigley Equation 8-10", [[S("S_p"), S("S_{ut}")], ["grade"]]), knowns)
+            logs += solve_pathway((PathType.TABLE_OR_FIGURE, "Shigley Table 8-10", [[S("S_p"), S("S_{ut}")], ["grade"]]), knowns)
         elif "Metric" in knowns["grade"] or "class" in knowns["grade"]:
-            logs += solve_pathway((PathType.TABLE_OR_FIGURE, "Shigley Equation 8-11", [[S("S_p"), S("S_{ut}")], ["grade"]]), knowns)
+            logs += solve_pathway((PathType.TABLE_OR_FIGURE, "Shigley Table 8-11", [[S("S_p"), S("S_{ut}")], ["grade"]]), knowns)
         else:
             raise Exception("Unable to determine standard, please include one and only one of the following in \"grade\":\n    [SAE, ASTM, Metric, grade, designation, class]")
         return logs
@@ -148,6 +150,7 @@ def retrieve_singlebolt_information():
         (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("l_d"), S("L")-S("L_T"))),
         (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("l_t"), S("l")-S("l_d"))),
         (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("A_d"), sym.pi*S("d")**2/4)),
+        (PathType.EQUATION, "General rule", Geqn(S("d_w"), 1.5*S("d"))),
 
         (PathType.TABLE_OR_FIGURE, "Shigley Table 8-8", [[S("E")], ["bolt material"]]),
         (PathType.EQUATION, "Shigley Eqaution 8-16", Geqn(S("k_t"), S("A_t")*S("E")/S("l_t"))),
@@ -155,17 +158,17 @@ def retrieve_singlebolt_information():
         (PathType.EQUATION, "Shigley Eqaution 8-17", Geqn(S("k_b"), S("A_d")*S("A_t")*S("E")/(S("A_d")*S("l_t")+S("A_t")*S("l_d")))),
         (PathType.CUSTOM, "equvilent spring constant of material", [[S("k_m")], ["material layers"]], get_km),
 
-        (PathType.TABLE_OR_FIGURE, "Shigley proof and ultimate strength", [[S("S_p"), S("S_{ut}")], ["grade"]], get_strength),
-        (PathType.TABLE_OR_FIGURE, "Shigley Equation 8-17", [[S("S_{e}")], [""]]),
+        (PathType.CUSTOM, "Shigley proof and ultimate strength", [[S("S_p"), S("S_{ut}")], ["grade"]], get_strength),
+        (PathType.TABLE_OR_FIGURE, "Shigley Table 8-17", [[S("S_e")], []]),
 
-        (PathType.EQUATION, "Shigley Eqaution TODO", Geqn(S("P"), S("P_{tot}")/S("N"))),
+        (PathType.EQUATION, "Shigley Eqaution TODO", Geqn(S("P"), S("P_{tot}")/S("N_{bolt}"))),
         (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("F_i"), S("\\text{Percent\\,Preload}")*S("A_t")*S("S_p"))),
 
         (PathType.EQUATION, "Joint Costant", Geqn(S("C"), S("k_b")/(S("k_b")+S("k_m")))),
         (PathType.EQUATION, "Shigley Equation 8-24", Geqn(S("F_b"), (S("C"))*S("P")+S("F_i"))),
         (PathType.EQUATION, "Shigley Equation 8-25", Geqn(S("F_m"), (1-S("C"))*S("P")-S("F_i"))),
 
-        (PathType.EQUATION, "Shigley Equation 8-27", Geqn(S("T"), S("K")*S("F_i")*S("d"))),
+        (PathType.EQUATION, "Shigley Equation 8-27", Geqn(S("T_i"), S("K")*S("F_i")*S("d"))),
         (PathType.EQUATION, "average diameter", Geqn(S("d_m"), (S("d")+S("d_r"))/2)),
         (PathType.EQUATION, "lead angle", Geqn(sym.tan(S("\\lambda")), S("p")/(sym.pi * S("d_m")))),
         (PathType.EQUATION, "Shigley Equation 8-26", Geqn(
@@ -177,14 +180,15 @@ def retrieve_singlebolt_information():
         )),
         (PathType.TABLE_OR_FIGURE, "Shigley Table 8-15", [[S("K")], ["bolt condition"]]),
 
-        (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("n_L"), (S("S_p")*S("A_t")-S("F_i"))/(S("C")*S("P")))),
-        (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("n_y"), S("S_p")*S("A_t")/(S("C")*S("P")+S("F_i")))),
-        (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("n_0"), S("F_i")/(S("P")*(1-S("C"))))),
+        (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("n_{load}"), (S("S_p")*S("A_t")-S("F_i"))/(S("C")*S("P")))),
+        (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("n_{yield\\,tensile}"), (S("C")*S("P")+S("F_i"))/S("A_t"))),
+        (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("n_{yield\\,static}"), S("S_p")*S("A_t")/(S("C")*S("P")+S("F_i")))),
+        (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("n_{separation}"), S("F_i")/(S("P")*(1-S("C"))))),
         (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("\\sigma_i"), S("F_i")/S("A_t"))),
         (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("\\sigma_a"), S("C")*(S("P_{max}")-S("P_{min}"))/(2*S("A_t")))),
         (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("\\sigma_m"), S("C")*(S("P_{max}")+S("P_{min}"))/(2*S("A_t"))+S("\\sigma_i"))),
         (PathType.EQUATION, "Shigley Equation TODO", Geqn(
-            S("n_f"),
+            S("n_{fatigue}"),
             (S("S_e")*(S("S_{ut}")-S("\\sigma_i"))) /
             (S("S_{ut}")*S("\\sigma_a")+S("S_e")*(S("\\sigma_m")-S("\\sigma_i")))
         )),
