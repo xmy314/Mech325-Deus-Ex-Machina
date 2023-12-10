@@ -42,13 +42,13 @@ class ComponentType(Enum):
     BALL_AND_CYLINDRICAL_BEARING_RADIAL = 12    # TODO need to determine clearance
     BALL_AND_CYLINDRICAL_BEARING_ALL = 13       # TODO need to determine clearance.
     TAPERED_ROLLER_BEARING = 14                 # TODO need to determine clearance.
-    SHAFT_POINT = 15                            # TODO
+    SHAFT_POINT = 15                            # Done
     KEY = 16                                    # TEST
     RETAINING_RING = 17                         # TODO
     POWER_SCREWS = 18                           # TEST
     BALL_SCREWS = 19                            # TODO
     SPRINGS = 20                                # TODO
-    FASTENER_AND_BOLTS = 21                     # TEST
+    BOLTS = 21                                  # TEST
     CUSTOM = 22                                 # entirely self contained object
 
 
@@ -211,7 +211,10 @@ def query_pathways(context):
     elif context["component_type"] == ComponentType.POWER_SCREWS:
         from mech325.components.power_screw import retrieve_power_screw_information
         pathways = retrieve_power_screw_information()
-    elif context["component_type"] == ComponentType.POWER_SCREWS:
+    elif context["component_type"] == ComponentType.BALL_SCREWS:
+        from mech325.components.ball_screw import retrieve_ballscrew_information
+        pathways = retrieve_ballscrew_information()
+    elif context["component_type"] == ComponentType.BOLTS:
         from mech325.components.single_bolt import retrieve_singlebolt_information
         pathways = retrieve_singlebolt_information()
     elif context["component_type"] == ComponentType.CUSTOM:
