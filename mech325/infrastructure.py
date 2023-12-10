@@ -46,7 +46,7 @@ class ComponentType(Enum):
     KEY = 16                                    # TEST
     RETAINING_RING = 17                         # TODO
     POWER_SCREWS = 18                           # TEST
-    BALL_SCREWS = 19                            # TODO
+    BALL_SCREWS = 19                            # TEST
     SPRINGS = 20                                # TODO
     BOLTS = 21                                  # TEST
     CUSTOM = 22                                 # entirely self contained object
@@ -100,7 +100,7 @@ def solve_pathway(pathway, knowns):
         latex_entry += "\n    "+direct_latex
         if len(symbols_in_eqn) > 1:
             latex_entry += r"\\"+"\n    "+subbed_latex
-            latex_entry += r"\\"+"\n    "+sym.latex(touch(sym.Eq(unknown, knowns[unknown]))).replace("=", "&=")
+            latex_entry += r"\\"+"\n    "+f"{unknown} &= {knowns[unknown]:.5g}"
         latex_entry += "\n"+r"\end{align*}"
 
         return [latex_entry]
@@ -217,6 +217,9 @@ def query_pathways(context):
     elif context["component_type"] == ComponentType.BOLTS:
         from mech325.components.single_bolt import retrieve_singlebolt_information
         pathways = retrieve_singlebolt_information()
+    elif context["component_type"] == ComponentType.SPRINGS:
+        from mech325.components.spring import retrieve_spring_information
+        pathways = retrieve_spring_information(context["vars"])
     elif context["component_type"] == ComponentType.CUSTOM:
         pathways = context["pathways"]
     else:
@@ -385,7 +388,7 @@ def analyze(context, is_full_problem=True):
         summary_lines += "\n\\begin{tabular}{lll}"
         for target in context["targets"]:
             if isinstance(target, sym.Expr):
-                summary_lines += f"\n    ${sym.latex(target)}$ & : & {round_nsig(knowns[target],3)}"+r"\\"
+                summary_lines += f"\n    ${sym.latex(target)}$ & : & {round_nsig(knowns[target],3):.5g}"+r"\\"
             else:
                 summary_lines += f"\n    {target} & : & {knowns[target]}"+r"\\"
         summary_lines += "\n\\end{tabular}"

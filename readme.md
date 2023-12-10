@@ -66,7 +66,8 @@ Features:
 | KEY               |                               |  x            |  x            |               |
 | POWER SCREW       |                               |  x            |               |               |
 | BALL SCREW        |                               |  x            |               |               |
-| SPRINGS           |                               |               |               |               |
+| SPRINGS           |  si                           |  x            |  x            |               |
+| SPRINGS           |  imperial                     |  x            |               |               |
 | BOLTS             |                               |  x            |               |               |
 | BOLT JOINT        |                               |  x            |  x            |               |
 
