@@ -68,6 +68,7 @@ Features:
 | BALL SCREW        |                               |  x            |               |               |
 | SPRINGS           |  si                           |  x            |  x            |               |
 | SPRINGS           |  imperial                     |  x            |               |               |
-| BOLTS             |                               |  x            |               |               |
+| BOLTS             |  imperial                     |  x            |  x            |               |
+| BOLTS             |  si                           |  x            |               |               |
 | BOLT JOINT        |                               |  x            |  x            |               |
 

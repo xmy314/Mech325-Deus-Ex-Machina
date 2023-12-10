@@ -388,7 +388,7 @@ def analyze(context, is_full_problem=True):
         summary_lines += "\n\\begin{tabular}{lll}"
         for target in context["targets"]:
             if isinstance(target, sym.Expr):
-                summary_lines += f"\n    ${sym.latex(target)}$ & : & {round_nsig(knowns[target],3):.5g}"+r"\\"
+                summary_lines += f"\n    ${sym.latex(target)}$ & : & {knowns[target]:.5g}"+r"\\"
             else:
                 summary_lines += f"\n    {target} & : & {knowns[target]}"+r"\\"
         summary_lines += "\n\\end{tabular}"
