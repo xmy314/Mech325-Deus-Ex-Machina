@@ -65,7 +65,7 @@ Features:
 | SHAFT             |                               |  x            |  x            |               |
 | KEY               |                               |  x            |  x            |               |
 | POWER SCREW       |                               |  x            |               |               |
-| BALL SCREW        |                               |  x            |               |               |
+| BALL SCREW        |                               |  x            |  x            |               |
 | SPRINGS           |  si                           |  x            |  x            |               |
 | SPRINGS           |  imperial                     |  x            |               |               |
 | BOLTS             |  imperial                     |  x            |  x            |               |
