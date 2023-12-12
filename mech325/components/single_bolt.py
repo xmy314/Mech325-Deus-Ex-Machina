@@ -147,9 +147,9 @@ def retrieve_singlebolt_information():
         (PathType.EQUATION, "Tutorial", Geqn(S("L_{min}"), S("l")+S("H")+3*S("p"))),
         (PathType.CUSTOM, "round to standard", [[S("L")], [S("L_{min}")]], round_L),
         (PathType.CUSTOM, "Shigley Equation 8-13/14", [[S("L_T")], ["series", S("d")]], get_LT),
-        (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("l_d"), S("L")-S("L_T"))),
-        (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("l_t"), S("l")-S("l_d"))),
-        (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("A_d"), sym.pi*S("d")**2/4)),
+        (PathType.EQUATION, "Shigley Equation pg-438", Geqn(S("l_d"), S("L")-S("L_T"))),
+        (PathType.EQUATION, "Shigley Equation pg-438", Geqn(S("l_t"), S("l")-S("l_d"))),
+        (PathType.EQUATION, "Shigley Equation pg-438", Geqn(S("A_d"), sym.pi*S("d")**2/4)),
         (PathType.EQUATION, "General rule", Geqn(S("d_w"), 1.5*S("d"))),
 
         (PathType.TABLE_OR_FIGURE, "Shigley Table 8-8", [[S("E")], ["bolt material"]]),
@@ -161,8 +161,8 @@ def retrieve_singlebolt_information():
         (PathType.CUSTOM, "Shigley proof and ultimate strength", [[S("S_p"), S("S_{ut}")], ["grade"]], get_strength),
         (PathType.TABLE_OR_FIGURE, "Shigley Table 8-17", [[S("S_e")], []]),
 
-        (PathType.EQUATION, "Shigley Eqaution TODO", Geqn(S("P"), S("P_{tot}")/S("N_{bolt}"))),
-        (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("F_i"), S("\\text{Percent\\,Preload}")*S("A_t")*S("S_p"))),
+        (PathType.EQUATION, "Shigley Eqaution section 8-7 (a)", Geqn(S("P"), S("P_{tot}")/S("N_{bolt}"))),
+        (PathType.EQUATION, "Shigley Equation 8-31", Geqn(S("F_i"), S("\\text{Percent\\,Preload}")*S("A_t")*S("S_p"))),
 
         (PathType.EQUATION, "Joint Costant", Geqn(S("C"), S("k_b")/(S("k_b")+S("k_m")))),
         (PathType.EQUATION, "Shigley Equation 8-24", Geqn(S("F_b"), (S("C"))*S("P")+S("F_i"))),
@@ -180,14 +180,13 @@ def retrieve_singlebolt_information():
         )),
         (PathType.TABLE_OR_FIGURE, "Shigley Table 8-15", [[S("K")], ["bolt condition"]]),
 
-        (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("n_{load}"), (S("S_p")*S("A_t")-S("F_i"))/(S("C")*S("P")))),
-        (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("n_{yield\\,tensile}"), (S("C")*S("P")+S("F_i"))/S("A_t"))),
-        (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("n_{yield\\,static}"), S("S_p")*S("A_t")/(S("C")*S("P")+S("F_i")))),
-        (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("n_{separation}"), S("F_i")/(S("P")*(1-S("C"))))),
-        (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("\\sigma_i"), S("F_i")/S("A_t"))),
-        (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("\\sigma_a"), S("C")*(S("P_{max}")-S("P_{min}"))/(2*S("A_t")))),
-        (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("\\sigma_m"), S("C")*(S("P_{max}")+S("P_{min}"))/(2*S("A_t"))+S("\\sigma_i"))),
-        (PathType.EQUATION, "Shigley Equation TODO", Geqn(
+        (PathType.EQUATION, "Shigley Equation 8-29", Geqn(S("n_{load}"), (S("S_p")*S("A_t")-S("F_i"))/(S("C")*S("P")))),
+        (PathType.EQUATION, "Shigley Equation 8-28", Geqn(S("n_{yield}"), S("S_p")*S("A_t")/(S("C")*S("P")+S("F_i")))),
+        (PathType.EQUATION, "Shigley Equation 8-30", Geqn(S("n_{separation}"), S("F_i")/(S("P")*(1-S("C"))))),
+        (PathType.EQUATION, "Shigley Equation pg-451", Geqn(S("\\sigma_i"), S("F_i")/S("A_t"))),
+        (PathType.EQUATION, "Shigley Equation 8-35", Geqn(S("\\sigma_a"), S("C")*(S("P_{max}")-S("P_{min}"))/(2*S("A_t")))),
+        (PathType.EQUATION, "Shigley Equation 8-36", Geqn(S("\\sigma_m"), S("C")*(S("P_{max}")+S("P_{min}"))/(2*S("A_t"))+S("\\sigma_i"))),
+        (PathType.EQUATION, "Shigley Equation 8-38", Geqn(
             S("n_{fatigue}"),
             (S("S_e")*(S("S_{ut}")-S("\\sigma_i"))) /
             (S("S_{ut}")*S("\\sigma_a")+S("S_e")*(S("\\sigma_m")-S("\\sigma_i")))

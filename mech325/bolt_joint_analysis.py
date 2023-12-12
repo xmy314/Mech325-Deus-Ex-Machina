@@ -90,12 +90,12 @@ def stress_analysis(context):
 
     bolt_pathways = [
         (PathType.CUSTOM, "Shigley Table 8-9 to 8-11", [[S("S_y")], ["grade"]], get_sy),
-        (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("S_{sy}"), S("S_y")/sym.sqrt(3))),
-        (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("\\tau"), S("F")/S("A"))),
-        (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("n_{\\text{bolt shear}}"), S("S_{sy}")/S("\\tau"))),
+        (PathType.EQUATION, "Von Mises Shear Strength", Geqn(S("S_{sy}"), S("S_y")/sym.sqrt(3))),
+        (PathType.EQUATION, "Shigley Eqution 8-53", Geqn(S("\\tau"), S("F")/S("A"))),
+        (PathType.EQUATION, "Bolt Shear Safety Factor", Geqn(S("n_{\\text{bolt shear}}"), S("S_{sy}")/S("\\tau"))),
 
-        (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("\\sigma"), S("F")/(S("t")*S("d")))),
-        (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("n_{\\text{bolt bearing}}"), S("S_y")/S("\\sigma"))),
+        (PathType.EQUATION, "Shigley Equation 8-55", Geqn(S("\\sigma"), S("F")/(S("t")*S("d")))),
+        (PathType.EQUATION, "Bolt Bearing Safety factor", Geqn(S("n_{\\text{bolt bearing}}"), S("S_y")/S("\\sigma"))),
     ]
 
     bolt_sub_problem = {
@@ -114,9 +114,9 @@ def stress_analysis(context):
 
     bracket_pathways = [
         (PathType.TABLE_OR_FIGURE, "Shigley Table A-20", [[S("S_y")], ["grade"]]),
-        (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("n_{\\text{bracket bearing}}"), S("S_y")/S("\\sigma"))),
-        (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("\\sigma_{bending}"), S("M")*S("y")/S("I"))),
-        (PathType.EQUATION, "Shigley Equation TODO", Geqn(S("n_{\\text{bracket bending}}"), S("S_y")/S("\\sigma_{bending}"))),
+        (PathType.EQUATION, "Bracket Bearing Safety Factor", Geqn(S("n_{\\text{bracket bearing}}"), S("S_y")/S("\\sigma"))),
+        (PathType.EQUATION, "Shigley Equation 8-52", Geqn(S("\\sigma_{bending}"), S("M")*S("y")/S("I"))),
+        (PathType.EQUATION, "Bracket Bending Safety Factor", Geqn(S("n_{\\text{bracket bending}}"), S("S_y")/S("\\sigma_{bending}"))),
     ]
 
     context["bracket"]["weak point"].update(context["bracket"])
