@@ -5,7 +5,7 @@ from enum import Enum
 from math import radians, copysign
 from sympy import sin, cos, tan, sqrt
 from os.path import join
-from mech325.infrastructure import round_nsig, ComponentType, PathType, Geqn, analyze, solve_pathway, compile_latex, touch
+from mech325.infrastructure import round_nsig, ComponentType, PathType, Geqn, analyze, solve_pathway, compile_latex
 
 
 def geometry(context):

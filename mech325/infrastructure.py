@@ -28,28 +28,28 @@ def touch(e): return e.xreplace(ir(e))
 
 
 class ComponentType(Enum):
-    FLAT_BELT = 1                               # TODO need to compute developed friction and minimum operating stress.
-    V_BELT = 2                                  # Done
-    SYNCHRONOUS_BELT = 3                        # Done
-    CHAIN = 4                                   # Done
-    WIRE_ROPE = 5                               # TODO
-    SPUR_GEAR = 6                               # Done
-    HELICAL_GEAR = 7                            # TEST Selection
-    BEVEL_GEAR = 8                              # Done
-    WORM_GEAR = 9                               # TEST Selection
-    RACK_PINION = 10                            # TODO
-    BOUNDARY_LUBRICATED_BEARING = 11            # TEST Selection
-    BALL_AND_CYLINDRICAL_BEARING_RADIAL = 12    # TODO need to determine clearance
-    BALL_AND_CYLINDRICAL_BEARING_ALL = 13       # TODO need to determine clearance.
-    TAPERED_ROLLER_BEARING = 14                 # TODO need to determine clearance.
-    SHAFT_POINT = 15                            # Done
-    KEY = 16                                    # TEST
-    RETAINING_RING = 17                         # TODO
-    POWER_SCREWS = 18                           # TEST
-    BALL_SCREWS = 19                            # TEST
-    SPRINGS = 20                                # TODO
-    BOLTS = 21                                  # TEST
-    CUSTOM = 22                                 # entirely self contained object
+    FLAT_BELT = 1
+    V_BELT = 2
+    SYNCHRONOUS_BELT = 3
+    CHAIN = 4
+    WIRE_ROPE = 5
+    SPUR_GEAR = 6
+    HELICAL_GEAR = 7
+    BEVEL_GEAR = 8
+    WORM_GEAR = 9
+    RACK_PINION = 10
+    BOUNDARY_LUBRICATED_BEARING = 11
+    BALL_AND_CYLINDRICAL_BEARING_RADIAL = 12
+    BALL_AND_CYLINDRICAL_BEARING_ALL = 13
+    TAPERED_ROLLER_BEARING = 14
+    SHAFT_POINT = 15
+    KEY = 16
+    RETAINING_RING = 17
+    POWER_SCREWS = 18
+    BALL_SCREWS = 19
+    SPRINGS = 20
+    BOLTS = 21
+    CUSTOM = 22
 
 
 class PathType(Enum):
@@ -140,7 +140,7 @@ def solve_pathway(pathway, knowns):
     # if is a mock of a table, evaluate with the mock.
     if pathway[0] == PathType.MOCK_TABLE_OR_FIGURE:
         substring = ', '.join([
-            f'${sym.latex(symbol)} = {touch(knowns[symbol])} $'
+            f'${sym.latex(symbol)} = {knowns[symbol]:.5g} $'
             if isinstance(symbol, sym.Expr) else
             f'$\\text{{{symbol}}} = \\text{{{knowns[symbol]}}} $'
             for symbol in pathway[2][1]])
@@ -152,7 +152,7 @@ def solve_pathway(pathway, knowns):
         pathway[3](knowns)
 
         substring = "\n"+'\n'.join([
-            f'$${sym.latex(symbol)} = {touch(knowns[symbol]):.3g} $$'
+            f'$${sym.latex(symbol)} = {knowns[symbol]:.3g} $$'
             if isinstance(symbol, sym.Expr)
             else f'$$\\text{{{symbol}}} = {knowns[symbol]} $$'
             for symbol in new_knowledge])

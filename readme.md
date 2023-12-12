@@ -48,7 +48,7 @@ Features:
 | V BELT            |                               |  x            |  x            |  x            |
 | SYNCHRONOUS BELT  |                               |  x            |  x            |               |
 | CHAIN             |                               |  x            |  x            |               |
-| WIRE ROPE         |                               |  x            |  x            |               |
+| WIRE ROPE         |                               |               |               |               |
 | SPUR GEAR         |                               |  x            |  x            |               |
 | HELICAL GEAR      |                               |  x            |               |               |
 | BEVEL GEAR        |                               |  x            |  x            |               |
@@ -63,11 +63,15 @@ Features:
 | TAPER BEARING     | Selection                     |  x            |  x            |  x            |
 | TAPER BEARING     | Clearance                     |               |               |               |
 | SHAFT             |                               |  x            |  x            |               |
-| KEY               |                               |  x            |  x            |               |
+| KEY               |                               |               |               |               |
+| PIN               |                               |               |               |               |
+| SET SCREW         |                               |               |               |               |
 | POWER SCREW       |                               |  x            |               |               |
 | BALL SCREW        |                               |  x            |  x            |               |
 | SPRINGS           |  si                           |  x            |  x            |               |
 | SPRINGS           |  imperial                     |  x            |               |               |
+| SPRINGS           |  Zimmerli, Sinus Failure      |               |               |               |
+| SPRINGS           |  critical frequency           |               |               |               |
 | BOLTS             |  imperial                     |  x            |  x            |               |
 | BOLTS             |  si                           |  x            |               |               |
 | BOLT JOINT        |                               |  x            |  x            |               |

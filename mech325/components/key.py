@@ -8,7 +8,7 @@ def retrieve_key_information_mott():
     def round_l_to_quarter(knowns):
         logs = []
         knowns[S("L")] = math.ceil(4*knowns[S("L_{min}")])/4
-        logs.append(f'Round L up to the nearest quarter: $$L={touch(knowns[S("L")])}$$')
+        logs.append(f'Round L up to the nearest quarter: $$L={knowns[S("L")]:.2}$$')
         return logs
 
     pathways = [

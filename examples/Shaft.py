@@ -11,7 +11,7 @@ context = {
             "power": 10,  # [hp]
             "diameter": 12,
             "left feature": "ring",
-            "center feature": "sled runner",
+            "middle feature": "sled runner",
             "right feature": "ring",
             "secured by": ComponentType.KEY,
         },
@@ -49,7 +49,7 @@ context = {
             "diameter": 8,
             "pressure angle": radians(20),
             "left feature": "ring",
-            "center feature": "sled runner",
+            "middle feature": "sled runner",
             "right feature": "ring",
         },
         {
@@ -61,7 +61,7 @@ context = {
             "power": sym.Integer(5),
             "diameter": 6,
             "left feature": "ring",
-            "center feature": "sled runner",
+            "middle feature": "sled runner",
             "right feature": "ring",
             "secured by": ComponentType.KEY,
         },
@@ -84,12 +84,3 @@ logs.append(shaft_analysis(context))
 logs += divide_and_conquer(context)
 
 compile_latex(logs)
-
-# Expected Output:
-# \begin{align*}
-#     D_A &=    1.00\\
-#     D_B &=    2.50\\
-#     D_C &=    3.56\\
-#     D_D &=    2.93\\
-#     D_E &=    0.81\\
-# \end{align*}

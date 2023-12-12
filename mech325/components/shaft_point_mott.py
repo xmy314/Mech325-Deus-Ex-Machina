@@ -21,7 +21,7 @@ def retrieve_shaft_point_information_mott():
         return logs
 
     def cs_mock(knowns):
-        knowns[S("C_s")] = round((2.85289**(knowns[S("D_{iter}")]**(-0.0857608))-2.15255)/2+0.5, 2)
+        knowns[S("C_s")] = round(1.88003**(knowns[S("D_{iter}")]**(-0.0846996))-1.00099, 2)
 
     def shear_wrapper(knowns):
         logs = []
