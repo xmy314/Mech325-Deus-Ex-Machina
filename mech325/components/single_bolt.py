@@ -184,8 +184,8 @@ def retrieve_singlebolt_information():
         (PathType.EQUATION, "Shigley Equation 8-28", Geqn(S("n_{yield}"), S("S_p")*S("A_t")/(S("C")*S("P")+S("F_i")))),
         (PathType.EQUATION, "Shigley Equation 8-30", Geqn(S("n_{separation}"), S("F_i")/(S("P")*(1-S("C"))))),
         (PathType.EQUATION, "Shigley Equation pg-451", Geqn(S("\\sigma_i"), S("F_i")/S("A_t"))),
-        (PathType.EQUATION, "Shigley Equation 8-35", Geqn(S("\\sigma_a"), S("C")*(S("P_{max}")-S("P_{min}"))/(2*S("A_t")))),
-        (PathType.EQUATION, "Shigley Equation 8-36", Geqn(S("\\sigma_m"), S("C")*(S("P_{max}")+S("P_{min}"))/(2*S("A_t"))+S("\\sigma_i"))),
+        (PathType.EQUATION, "Shigley Equation 8-35",   Geqn(S("\\sigma_a"), S("C")*(S("P_{max}")-S("P_{min}"))/(2*S("A_t")))),
+        (PathType.EQUATION, "Shigley Equation 8-36",   Geqn(S("\\sigma_m"), S("C")*(S("P_{max}")+S("P_{min}"))/(2*S("A_t"))+S("\\sigma_i"))),
         (PathType.EQUATION, "Shigley Equation 8-38", Geqn(
             S("n_{fatigue}"),
             (S("S_e")*(S("S_{ut}")-S("\\sigma_i"))) /

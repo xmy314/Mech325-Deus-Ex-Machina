@@ -14,9 +14,9 @@ def retrieve_helicalgear_information():
             if error <= min_error:
                 min_error = error
                 solution_set = (nin, round(knowns["VR_{rough}"]*nin), (round(knowns["VR_{rough}"]*nin)/nin))
-        knowns["N_{in}"] = solution_set[0]
-        knowns["N_{out}"] = solution_set[1]
-        knowns["VR"] = solution_set[2]
+        knowns[S("N_{in}")] = solution_set[0]
+        knowns[S("N_{out}")] = solution_set[1]
+        knowns[S("VR")] = solution_set[2]
 
         logs.append("By brute forcing, {solution_set[0]}:{solution_set[1]} is with in the allowed design constraints and is closest to the desired velocity ratio of {knowns['VR_{rough}']}")
         return logs
@@ -34,8 +34,8 @@ def retrieve_helicalgear_information():
         else:
             raise Exception("This should not occur, but if it ever did, something else is wrong.")
 
-        logs += solve_pathway((PathType.EQUATION, "Mott pg 433", Geqn("J_{in}", S("J_{o\\,in}")*S("J_{c\\,in}"))), knowns)
-        logs += solve_pathway((PathType.EQUATION, "Mott pg 433", Geqn("J_{out}", S("J_{o\\,out}")*S("J_{c\\,out}"))), knowns)
+        logs += solve_pathway((PathType.EQUATION, "Mott pg 433", Geqn(S("J_{in}"), S("J_{o\\,in}")*S("J_{c\\,in}"))), knowns)
+        logs += solve_pathway((PathType.EQUATION, "Mott pg 433", Geqn(S("J_{out}"), S("J_{o\\,out}")*S("J_{c\\,out}"))), knowns)
 
         return logs
 
@@ -67,7 +67,7 @@ def retrieve_helicalgear_information():
             chunk += "\n"+('\end{align*}')
         elif knowns[S("F")] <= 15:
             knowns[S("C_{pf}")] = ratio/10-0.0375+0.0125*knowns[S("F")]
-            chunk = ('\begin{align*}')
+            chunk = ('\\begin{align*}')
             chunk += "\n"+(f'{S("C_{pf}")} &= \\frac{{\\frac{{F}}{{D_{{in}}}}}}{{10}}-0.0375+0.0125 \cdot F\\\\')
             chunk += "\n"+(f'{S("C_{pf}")} &= {knowns[S("C_{pf}")]}\\\\')
             chunk += "\n"+('\end{align*}')
@@ -78,13 +78,13 @@ def retrieve_helicalgear_information():
 
     def compute_Cma(knowns):
         logs = []
-        if "Open" in knowns["exposure condition"]:
+        if "open" in knowns["exposure condition"].lower():
             logs += solve_pathway((PathType.EQUATION, "Mott Figure 9-13 Open",  Geqn(S("C_{ma}"), 0.2470 + 0.0167*S(r"F") - 0.0000765*S(r"F")*S(r"F"))), knowns)
-        elif "Commercial" in knowns["exposure condition"]:
+        elif "commercial" in knowns["exposure condition"].lower():
             logs += solve_pathway((PathType.EQUATION, "Mott Figure 9-13 Comm",  Geqn(S("C_{ma}"), 0.1270 + 0.0158*S(r"F") - 0.0001093*S(r"F")*S(r"F"))), knowns)
-        elif "Precision" in knowns["exposure condition"]:
+        elif "precision" in knowns["exposure condition"].lower():
             logs += solve_pathway((PathType.EQUATION, "Mott Figure 9-13 Prec",  Geqn(S("C_{ma}"), 0.0675 + 0.0128*S(r"F") - 0.0000926*S(r"F")*S(r"F"))), knowns)
-        elif "Extra-precision" in knowns["exposure condition"]:
+        elif "extra-precision" in knowns["exposure condition"].lower():
             logs += solve_pathway((PathType.EQUATION, "Mott Figure 9-13 Extr",  Geqn(S("C_{ma}"), 0.0380 + 0.0102*S(r"F") - 0.0000822*S(r"F")*S(r"F"))), knowns)
         else:
             raise Exception("Unexpected exposure condition")
@@ -127,7 +127,7 @@ def retrieve_helicalgear_information():
         (PathType.EQUATION, "General Equation VR",              Geqn(S("VR_{rough}"),       S("n_{in}")/S("n_{out\\,rough}"))),
         (PathType.EQUATION, "General Equation VR",              Geqn(S("VR"),               S("n_{in}")/S("n_{out}"))),
         (PathType.EQUATION, "General Equation VR",              Geqn(S("VR"),               S("N_{out}")/S("N_{in}"))),
-        (PathType.CUSTOM, "Brute Force Gear Combination",  [["N_{in}", "N_{out}", "N_{VR}"], [S("N_{in\\,min}"), S("N_{in\\,max}"), S("VR_{rough}")]], force_gear_combination),
+        (PathType.CUSTOM, "Brute Force Gear Combination",  [[S("N_{in}"), S("N_{out}"), S("VR")], [S("N_{in\\,min}"), S("N_{in\\,max}"), S("VR_{rough}")]], force_gear_combination),
         (PathType.EQUATION, "General Equation Pitchline Velocity",      Geqn(S("V"), sym.pi*S("D_{in}")*S("n_{in}")/12)),
 
         # Geometry
@@ -152,6 +152,7 @@ def retrieve_helicalgear_information():
         # s
         (PathType.TABLE_OR_FIGURE, "Mott Table 9-2", [[S("K_s")], [S("P_d")]]),
         # v
+        (PathType.EQUATION, "Mott Table 9-4", Geqn(S("A_v"), 17-S("Q_v"))),
         (PathType.EQUATION, "Mott page 384 B for Kv", Geqn(S("B_{kv}"), 0.25*(S("A_v")-5)**0.667)),
         (PathType.EQUATION, "Mott page 384 C for Kv", Geqn(S("C_{kv}"), 50+56*(1-S("B_{kv}")))),
         (PathType.EQUATION, "Mott page 384 Kv", Geqn(S("K_v"), (S("C_{kv}")/(S("C_{kv}")+sym.sqrt(sym.Min(S("V"), (S("C_{kv}")+14-S("A_v"))**2))))**(-S("B_{kv}")))),

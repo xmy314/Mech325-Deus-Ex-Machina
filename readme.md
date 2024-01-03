@@ -34,11 +34,21 @@ If there is an issue DURING EXAM:
 Good Luck in MECH 325.
 
 ## For those who want to help
+Urgent:
+Spring Fatigue loading, sinus, zimmerli, etc.
+
 General:
 - [ ] Refactor code to deal with iteration more effectively.
+- [ ] Decouple a big CUSTOM function.
+- [ ] Detect halting and guess missing informaiton.
+- [ ] Incorporate in units.
 
 UX:
 - [ ] Use description and units of values in a meaningful way.
+
+Main Missing Feature:
+- [ ] Wire Rope
+- [ ] Spring
 
 Features:
 | Main Task         | Sub Task                      | Implemented   | Tested        | Documented    |
@@ -55,7 +65,7 @@ Features:
 | WORM GEAR         |                               |  x            |               |               |
 | RACK PINION       |                               |               |               |               |
 | BUSHING           | Shigley Selection             |  x            |  x            |               |
-| BUSHING           |                               |  x            |               |               |
+| BUSHING           |                               |               |               |               |
 | BALL AND CYLINDRICAL BEARING RADIAL | Selection   |  x            |  x            |               |
 | BALL AND CYLINDRICAL BEARING RADIAL | Clearance   |               |               |               |
 | BALL AND CYLINDRICAL BEARING ALL | Selection      |  x            |  x            |               |

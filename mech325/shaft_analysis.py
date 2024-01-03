@@ -79,13 +79,13 @@ def convert_component_to_load(context):
             # tight side
             rf_pair.append((
                 (0, rotation_direction*driving*radius, component["z"]),
-                (nominal_force, 0, 0)
+                (-driving*rotation_direction*nominal_force, 0, 0)
             ))
         elif component["component_type"] == ComponentType.CHAIN:
             # tight side
             rf_pair.append((
                 (0, rotation_direction*driving*radius, component["z"]),
-                (nominal_force, 0, 0)
+                (-driving*rotation_direction*nominal_force, 0, 0)
             ))
         elif component["component_type"] == ComponentType.SPUR_GEAR:
             Fx = -nominal_force*tan(component["pressure angle"])
