@@ -6,11 +6,14 @@ def retrieve_flatbelt_information():
     print("Please note that it only solves upper operation limit due to stress but not lower operation limit from friction.")
 
     def compute_cv(knowns):
+        logs = []
         # return path to follow if ready, else return what is needed.
         if not "leather" in knowns["belt"]:
-            return [(PathType.EQUATION, "Shigley Text pg 891", Geqn(S("C_v"), 1))]
+            pathway =(PathType.EQUATION, "Shigley Text pg 891", Geqn(S("C_v"), 1))
         else:
-            return [(PathType.TABLE_OR_FIGURE, "Shigley Figure 17-9", [[S("C_v")], [S("V")]])]
+            pathway =(PathType.TABLE_OR_FIGURE, "Shigley Figure 17-9", [[S("C_v")], [S("V")]])
+        logs += solve_pathway(pathway, knowns)
+        return logs
 
     # type, name, (output,input)
     pathways = [
