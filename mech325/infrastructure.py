@@ -4,6 +4,7 @@ import math
 import cv2
 from os.path import join
 from enum import Enum
+from screeninfo import get_monitors
 
 #################################################################
 #                                                               #
@@ -109,7 +110,14 @@ def solve_pathway(pathway, knowns):
     if pathway[0] == PathType.TABLE_OR_FIGURE:
         file_path = ["References"]+pathway[1].split(" ")
         file_path[-1] += ".png"
+
         img = cv2.imread(join(*file_path))
+        assumed_screen_size = (3456,2234)
+        monitor = get_monitors()[0]
+        true_screen_size = (monitor.width,monitor.height)
+        screen_ratio = min(true_screen_size[0]/assumed_screen_size[0],true_screen_size[1]/assumed_screen_size[1])
+        img = cv2.resize(img,(round(img.shape[1]*screen_ratio),round(img.shape[0]*screen_ratio)))
+
         cv2.imshow(pathway[1], img)
         cv2.waitKey(1)
 
