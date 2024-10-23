@@ -265,12 +265,12 @@ def list_vars(context):
     print("The following are text type variables")
     text_vars.sort()
     for var in text_vars:
-        print(var)
+        print("-", var)
 
     print("The following are value type variables")
     symbolic_vars.sort(key=lambda x: sym.latex(x))
     for var in symbolic_vars:
-        print(var)
+        print("-", var)
 
     return text_vars, symbolic_vars
 
@@ -284,18 +284,13 @@ def analyze(context, is_full_problem=True):
 
     mock_knowns = set(context["vars"].keys())
 
-    # solve a tree
+    # traverse a directed acyclic graph
     while True:
-        # check completion
-        for target in context["targets"]:
-            if not target in mock_knowns:
-                break
-        else:
-            break
+        new_information_acquired = False
 
         # for each equation, check if there is a equation where only 1 value is missing.
         # for each figure, check if there is a figure where only 1 value is missing.
-        # this solution complete ignores the case of coupled equations but it doesn't exist in this unit so whatever.
+        # this solution complete ignores the case of coupled equations but those have all been refactored as custom functions.
 
         for i in range(len(pathways)):
             pathway = pathways[i]
@@ -327,6 +322,7 @@ def analyze(context, is_full_problem=True):
 
                 for symbol_retrievable in symbols_retrievable:
                     if not symbol_retrievable in mock_knowns:
+                        new_information_acquired = True
                         mock_knowns.add(symbol_retrievable)
                         source[symbol_retrievable] = i
 
@@ -341,8 +337,27 @@ def analyze(context, is_full_problem=True):
                         unknown_symbol = symbol_in_eqn
 
                 if unsolved == 1:
+                    new_information_acquired = True
                     mock_knowns.add(unknown_symbol)
                     source[unknown_symbol] = i
+
+                # check completion
+        
+        if not new_information_acquired:
+            print("Not enough information are provided. Please reference against list_vars.")
+            return ["Not enough information are provided. Please reference against list_vars."]
+
+        all_target_solved = True
+        for target in context["targets"]:
+            if not target in mock_knowns:
+                all_target_solved = False
+                break
+        
+        if all_target_solved:
+            break
+        else:
+            continue
+        
 
     # start solving and removing extra branches
     knowns = context["vars"]
