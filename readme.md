@@ -7,6 +7,8 @@ Install Latex Packages until it can compile `latex_output/main.tex`.
 Install Local Python Environment.
 Install necessary python Packages with `pip install -r requirements.txt`.
 
+run `git update-index --skip-worktree main.py` and `git update-index --skip-worktree latex_output/solution.tex`. So the specific question being solved is not tracked in the repo.
+
 ## TO SOLVE A PROBLEM WITH THIS REPO.
 
 1. Go to examples folder, copy content of the respective file into main.py.
