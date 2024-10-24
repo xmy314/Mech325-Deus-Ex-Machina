@@ -71,7 +71,7 @@ class PathType(Enum):
 #################################################################
 
 
-def solve_pathway(pathway, knowns):
+def solve_pathway(pathway, knowns,show_image=True):
     if pathway[0] == PathType.EQUATION:
         unknowns = []
         symbols_in_eqn = pathway[2].free_symbols
@@ -113,14 +113,15 @@ def solve_pathway(pathway, knowns):
         print("")
         print(join(*file_path))
 
-        img = cv2.imread(join(*file_path))
-        monitor = get_monitors()[0]
-        true_screen_size = (monitor.height,monitor.width)
-        screen_ratio = 0.5*max(true_screen_size[0]/img.shape[0],true_screen_size[1]/img.shape[1])
-        img = cv2.resize(img,(round(img.shape[1]*screen_ratio),round(img.shape[0]*screen_ratio)))
+        if show_image:
+            img = cv2.imread(join(*file_path))
+            monitor = get_monitors()[0]
+            true_screen_size = (monitor.height,monitor.width)
+            screen_ratio = 0.5*max(true_screen_size[0]/img.shape[0],true_screen_size[1]/img.shape[1])
+            img = cv2.resize(img,(round(img.shape[1]*screen_ratio),round(img.shape[0]*screen_ratio)))
 
-        cv2.imshow(pathway[1], img)
-        cv2.waitKey(1)
+            cv2.imshow(pathway[1], img)
+            cv2.waitKey(1)
 
         query_keys = pathway[2][1]
         for symbol in query_keys:
@@ -138,7 +139,8 @@ def solve_pathway(pathway, knowns):
                 knowns[knowable] = float(raw_input) if isinstance(knowable, sym.Expr) else raw_input
                 new_knowledge.append(knowable)
 
-        cv2.destroyAllWindows()
+        if show_image:
+            cv2.destroyAllWindows()
 
         substring = ', '.join([f'${sym.latex(symbol)} = {round_nsig(knowns[symbol],3):.3g} $' if isinstance(symbol, sym.Expr) else f'$\\text{{{symbol}}} = \\text{{{knowns[symbol]}}} $' for symbol in query_keys])
         return_string = f"Query {pathway[1]} with {substring}: "
@@ -178,6 +180,21 @@ def solve_pathway(pathway, knowns):
 
 
 def query_pathways(context):
+    """
+    List of all pathways relevent to the component type.
+
+    Parameters
+    ----------
+    context : dict
+        Various pieces of information of the problem.
+        Only the component_type is used.
+
+    Returns
+    -------
+    pathways : list
+        list of pathway objects.
+    """
+
     if context["component_type"] == ComponentType.FLAT_BELT:
         from mech325.components.flat_belt import retrieve_flatbelt_information
         pathways = retrieve_flatbelt_information()
@@ -238,6 +255,23 @@ def query_pathways(context):
 
 
 def list_vars(context,print_out=True):
+    """
+    List of all pathways relevent to the component_type defined in context.
+
+    Parameters
+    ----------
+    context : dict
+        Various pieces of information of the problem.
+        Only the component_type is used.
+    print_out : bool
+        Whether to print out the variable in the console.
+
+    Returns
+    -------
+    (text_vars, symbolic_vars) : tuple[list,list]
+        list of text type variables are strings.
+        list of value type (or symbolic type) variables are sympy symbols.
+    """
 
     vars = []
     if context["component_type"] == ComponentType.CUSTOM:
@@ -278,7 +312,28 @@ def list_vars(context,print_out=True):
     return text_vars, symbolic_vars
 
 
-def analyze(context, is_full_problem=True):
+def analyze(context, is_full_problem=True, show_image=True):
+    """
+    The core functionality. It takes in a context object and
+    attempt solving for all the desired unknowns.
+
+    Parameters
+    ----------
+    context : dict
+        Various pieces of information of the problem.
+    is_full_problem : bool
+        Whether there should be a summary at the end of this section.
+        Used for shaft design where the components on the shaft isn't the focus.
+    show_image : bool
+        Whether the user want images to automatically pop up.
+        Used if the image opened is too big or small.
+
+    Returns
+    -------
+    string
+        a list of latex strings that shows the computation process.
+    """
+
 
     pathways = query_pathways(context)
 
@@ -422,7 +477,7 @@ def analyze(context, is_full_problem=True):
             continue
 
         # if solvable
-        logs += solve_pathway(pathway, knowns)
+        logs += solve_pathway(pathway, knowns,show_image=show_image)
 
     if (is_full_problem):
         summary_lines = "\nFinal Design Parameters:\\\\"
@@ -439,13 +494,22 @@ def analyze(context, is_full_problem=True):
 
 
 def compile_latex(logs):
+    """
+    Takes in logs, save it to "latex_output/solution.tex" 
+    and run pdflatex to compile it to "latex_output/aux/main.pdf" 
+
+    Parameters
+    ----------
+    logs : string
+        a list of latex strings that shows the computation process.
+
+    """
     import subprocess
     import os
-    from os.path import join
     import re
 
     latex_output = "\n\n".join(logs)
-    # remove space between slign blocks
+    # remove space between align blocks
     latex_output = re.sub(r"\\end\{align\*\}\n\n\\begin\{align\*\}", r"\\end{align*}\n\\begin{align*}", latex_output)
     with open(join("latex_output", "solution.tex"), "w+") as fi:
         fi.write(latex_output)
