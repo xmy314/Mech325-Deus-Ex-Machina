@@ -236,7 +236,7 @@ def query_pathways(context):
     return pathways
 
 
-def list_vars(context):
+def list_vars(context,print_out=True):
 
     vars = []
     if context["component_type"] == ComponentType.CUSTOM:
@@ -262,15 +262,17 @@ def list_vars(context):
         else:
             text_vars.append(var)
 
-    print("The following are text type variables")
     text_vars.sort()
-    for var in text_vars:
-        print("-", var)
-
-    print("The following are value type variables")
     symbolic_vars.sort(key=lambda x: sym.latex(x))
-    for var in symbolic_vars:
-        print("-", var)
+
+    if print_out:
+        print("The following are text type variables")
+        for var in text_vars:
+            print("-", var)
+
+        print("The following are value type variables")
+        for var in symbolic_vars:
+            print("-", var)
 
     return text_vars, symbolic_vars
 
@@ -344,8 +346,23 @@ def analyze(context, is_full_problem=True):
                 # check completion
         
         if not new_information_acquired:
-            print("Not enough information are provided. Please reference against list_vars.")
-            return ["Not enough information are provided. Please reference against list_vars."]
+            print("Not enough information are provided. Please check the pdf output for what might be missing.")
+
+            t_var,s_var = list_vars(context)
+
+            logs = [
+                "Not enough information are provided. Please reference against the followings lists.",
+                "Here is a list of the knowns:",
+                ", ".join([f"${str(v)}$" if isinstance(v, sym.Expr) else v for v in t_var if v in mock_knowns]),
+                "Here is a list of the knowns:",
+                ", ".join([f"${str(v)}$" if isinstance(v, sym.Expr) else v for v in s_var if v in mock_knowns]),
+                "Here is a list of the unknown text types:",
+                ", ".join([f"${str(v)}$" if isinstance(v, sym.Expr) else v for v in t_var if not v in mock_knowns]),
+                "Here is a list of the unknown value types:",
+                ", ".join([f"${str(v)}$" if isinstance(v, sym.Expr) else v for v in s_var if not v in mock_knowns]),
+            ]
+
+            return logs
 
         all_target_solved = True
         for target in context["targets"]:
