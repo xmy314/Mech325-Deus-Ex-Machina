@@ -17,7 +17,8 @@ def retrieve_spurgear_information():
         knowns[S("N_{out}")] = solution_set[1]
         knowns[S("VR")] = solution_set[2]
 
-        logs.append(f"By brute forcing, {solution_set[0]}:{solution_set[1]} is with in the allowed design constraints and is closest to the desired velocity ratio of {knowns['VR_{rough}']}")
+        target = knowns[S('VR_{rough}')]
+        logs.append(f"By brute forcing, {solution_set[0]}:{solution_set[1]} is with in the allowed design constraints and is closest to the desired velocity ratio of {target}")
         return logs
 
     def compute_J(knowns):
