@@ -5,6 +5,7 @@ import cv2
 from os.path import join
 from enum import Enum
 from screeninfo import get_monitors
+import mech325 as m325
 
 #################################################################
 #                                                               #
@@ -71,7 +72,7 @@ class PathType(Enum):
 #################################################################
 
 
-def solve_pathway(pathway, knowns,show_image=True):
+def solve_pathway(pathway, knowns):
     if pathway[0] == PathType.EQUATION:
         unknowns = []
         symbols_in_eqn = pathway[2].free_symbols
@@ -113,7 +114,7 @@ def solve_pathway(pathway, knowns,show_image=True):
         print("")
         print(join(*file_path))
 
-        if show_image:
+        if m325.show_image:
             img = cv2.imread(join(*file_path))
             monitor = get_monitors()[0]
             true_screen_size = (monitor.height,monitor.width)
@@ -139,7 +140,7 @@ def solve_pathway(pathway, knowns,show_image=True):
                 knowns[knowable] = float(raw_input) if isinstance(knowable, sym.Expr) else raw_input
                 new_knowledge.append(knowable)
 
-        if show_image:
+        if m325.show_image:
             cv2.destroyAllWindows()
 
         substring = ', '.join([f'${sym.latex(symbol)} = {round_nsig(knowns[symbol],3):.3g} $' if isinstance(symbol, sym.Expr) else f'$\\text{{{symbol}}} = \\text{{{knowns[symbol]}}} $' for symbol in query_keys])
@@ -312,7 +313,7 @@ def list_vars(context,print_out=True):
     return text_vars, symbolic_vars
 
 
-def analyze(context, is_full_problem=True, show_image=True):
+def analyze(context, is_full_problem=True):
     """
     The core functionality. It takes in a context object and
     attempt solving for all the desired unknowns.
@@ -324,9 +325,6 @@ def analyze(context, is_full_problem=True, show_image=True):
     is_full_problem : bool
         Whether there should be a summary at the end of this section.
         Used for shaft design where the components on the shaft isn't the focus.
-    show_image : bool
-        Whether the user want images to automatically pop up.
-        Used if the image opened is too big or small.
 
     Returns
     -------
@@ -477,7 +475,7 @@ def analyze(context, is_full_problem=True, show_image=True):
             continue
 
         # if solvable
-        logs += solve_pathway(pathway, knowns,show_image=show_image)
+        logs += solve_pathway(pathway, knowns)
 
     if (is_full_problem):
         summary_lines = "\nFinal Design Parameters:\\\\"
