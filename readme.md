@@ -3,9 +3,11 @@
 ## TO USE THIS REPO
 
 Install Local Latex Compiler.
-Install Latex Packages until it can compile `latex_output/main.tex`.
-Install Local Python Environment.
-Install necessary python Packages with `pip install -r requirements.txt`.
+
+- people hade success with https://miktex.org/
+  Install Latex Packages until it can compile `latex_output/main.tex`.
+  Install Local Python Environment.
+  Install necessary python Packages with `pip install -r requirements.txt`.
 
 run `git update-index --skip-worktree main.py` and `git update-index --skip-worktree latex_output/solution.tex`. So the specific question being solved is not tracked in the repo.
 
