@@ -9,13 +9,13 @@ def retrieve_spurgear_information():
         min_error = 100
         solution_set = (0, 0, 0)
         for nin in range(knowns[S("N_{in\\,min}")], knowns[S("N_{in\\,max}")]+1):
-            error = (round(knowns["VR_{rough}"]*nin)/nin)-knowns["VR_{rough}"]
+            error = (round(knowns[S("VR_{rough}")]*nin)/nin)-knowns[S("VR_{rough}")]
             if error <= min_error:
                 min_error = error
-                solution_set = (nin, round(knowns["VR_{rough}"]*nin), (round(knowns["VR_{rough}"]*nin)/nin))
-        knowns["N_{in}"] = solution_set[0]
-        knowns["N_{out}"] = solution_set[1]
-        knowns["VR"] = solution_set[2]
+                solution_set = (nin, round(knowns[S("VR_{rough}")]*nin), (round(knowns[S("VR_{rough}")]*nin)/nin))
+        knowns[S("N_{in}")] = solution_set[0]
+        knowns[S("N_{out}")] = solution_set[1]
+        knowns[S("VR")] = solution_set[2]
 
         logs.append("By brute forcing, {solution_set[0]}:{solution_set[1]} is with in the allowed design constraints and is closest to the desired velocity ratio of {knowns['VR_{rough}']}")
         return logs
@@ -109,7 +109,7 @@ def retrieve_spurgear_information():
         (PathType.EQUATION, "General Equation VR",              Geqn(S("VR_{rough}"),       S("n_{in}")/S("n_{out\\,rough}"))),
         (PathType.EQUATION, "General Equation VR",              Geqn(S("VR"),               S("n_{in}")/S("n_{out}"))),
         (PathType.EQUATION, "General Equation VR",              Geqn(S("VR"),               S("N_{out}")/S("N_{in}"))),
-        (PathType.CUSTOM, "Brute Force Gear Combination",       [["N_{in}", "N_{out}", "N_{VR}"], [S("N_{in\\,min}"), S("N_{in\\,max}"), S("VR_{rough}")]], force_gear_combination),
+        (PathType.CUSTOM, "Brute Force Gear Combination",       [[S("N_{in}"), S("N_{out}"), S("N_{VR}")], [S("N_{in\\,min}"), S("N_{in\\,max}"), S("VR_{rough}")]], force_gear_combination),
         (PathType.EQUATION, "General Equation Pitchline Velocity",      Geqn(S("V"), sym.pi*S("D_{in}")*S("n_{in}")/12)),
 
         # gear geometry
