@@ -1,17 +1,24 @@
 # Mech 325, Deus ex Machina.
 
-## TO USE THIS REPO
+Good Luck in MECH 325.
 
-Install Local Latex Compiler.
+## Installation
 
-- people hade success with https://miktex.org/
-  Install Latex Packages until it can compile `latex_output/main.tex`.
-  Install Local Python Environment.
-  Install necessary python Packages with `pip install -r requirements.txt`.
+1. Install Local Latex Compiler.
 
-run `git update-index --skip-worktree main.py` and `git update-index --skip-worktree latex_output/solution.tex`. So the specific question being solved is not tracked in the repo.
+   People had success with [miktex.org](https://miktex.org/), try that.
 
-## TO SOLVE A PROBLEM WITH THIS REPO.
+2. Install Latex Packages until `latex_output/main.tex` can be compiled.
+3. Install Local Python Environment.
+
+   Install from the offical website [python.org](https://python.org/downloads/) and **add it to path**.
+
+4. Install necessary python Packages with `pip install -r requirements.txt`.
+5. Run `git update-index --skip-worktree main.py` and `git update-index --skip-worktree latex_output/solution.tex`. So the specific question being solved is not tracked in the repo, and update through `git pull` won't override them.
+
+## Using this repo
+
+### General Procedure
 
 1. Go to examples folder, copy content of the respective file into main.py.
 2. Replace the values as you see fit. For more variable names, use `list_vars(context)`.
@@ -19,50 +26,47 @@ run `git update-index --skip-worktree main.py` and `git update-index --skip-work
 4. Follow through the prompts.
 5. Read the answer off from `./latex_output/aux/main.pdf`.
 
-### Expected Behaviour
+### Global Flag
 
-- Waits a bit to find a path to solve the problem.
-- Start asking questions while showing table, figures, or instructions.
-- Exits.
+To use any flags `import mech325` at the beginning of the file.
+
+`mech325.show_image=False`
+
+- Disable figure pop-ups.
+- The figure can be opened through the printed path in the terminal instead.
 
 ### Unexpected Behaviour
 
-If an error is thrown or the program halts Something is wrong.
-
 If there is an issue BEFORE EXAM:
 
-- Please report it ASAP with the "context" you used.
+- Submit the issue as an github issue with the "context".
 
 If there is an issue DURING EXAM:
 
 - Save the "context" that cause the problem.
 - Forfeit the program, use the bible instead.
-- Please report it back to me with the "context".
+- Submit the issue as an github issue with the saved "context".
 
-## Other
-
-Good Luck in MECH 325.
+Or, fix it yourself and open a pull request.
 
 ## For those who want to help
 
-Urgent:
-Spring Fatigue loading, sinus, zimmerli, etc.
+Missing Components:
 
-General:
-
-- [ ] Refactor code to deal with iteration more effectively.
-- [ ] Decouple a big CUSTOM function.
-- [ ] Detect halting and guess missing informaiton.
-- [ ] Incorporate in units.
+- [] pulley of wire rope.
+- [] Spring Fatigue loading, sinus, zimmerli.
+- [] (Others that I probably missed).
 
 UX:
 
+- [ ] Guess potential missing informaiton.
+- [ ] Incorporate in units.
 - [ ] Use description and units of values in a meaningful way.
 
-Main Missing Feature:
+Internals:
 
-- [ ] Wire Rope
-- [ ] Spring
+- [ ] Refactor code to deal with iteration more effectively.
+- [ ] Decouple the big CUSTOM functions.
 
 Features:
 | Main Task | Sub Task | Implemented | Tested | Documented |
