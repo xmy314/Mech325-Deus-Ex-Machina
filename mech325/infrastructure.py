@@ -110,12 +110,13 @@ def solve_pathway(pathway, knowns):
     if pathway[0] == PathType.TABLE_OR_FIGURE:
         file_path = ["References"]+pathway[1].split(" ")
         file_path[-1] += ".png"
+        print("")
+        print(join(*file_path))
 
         img = cv2.imread(join(*file_path))
-        assumed_screen_size = (3456,2234)
         monitor = get_monitors()[0]
-        true_screen_size = (monitor.width,monitor.height)
-        screen_ratio = min(true_screen_size[0]/assumed_screen_size[0],true_screen_size[1]/assumed_screen_size[1])
+        true_screen_size = (monitor.height,monitor.width)
+        screen_ratio = 0.5*max(true_screen_size[0]/img.shape[0],true_screen_size[1]/img.shape[1])
         img = cv2.resize(img,(round(img.shape[1]*screen_ratio),round(img.shape[0]*screen_ratio)))
 
         cv2.imshow(pathway[1], img)
