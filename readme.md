@@ -2,6 +2,8 @@
 
 Good Luck in MECH 325.
 
+[Video Tutorial](https://youtu.be/Rc3pYKjJOvw)
+
 ## Installation
 
 1. Install Local Latex Compiler.
@@ -53,9 +55,9 @@ Or, fix it yourself and open a pull request.
 
 Missing Components:
 
-- [] pulley of wire rope.
-- [] Spring Fatigue loading, sinus, zimmerli.
-- [] (Others that I probably missed).
+- [ ] pulley of wire rope.
+- [ ] Spring Fatigue loading, sinus, zimmerli.
+- [ ] (Others that I probably missed).
 
 UX:
 
