@@ -46,6 +46,9 @@ def convert_component_to_load(context):
                 [S("R_{"+component["name"]+"x}"), S("R_{"+component["name"]+"y}"), S("R_{"+component["name"]+"z}")]
             ))
             continue
+        # 1 if it takes power from shaft
+        # 0 if it is support aka bearing
+        # -1 if it is driven by outside to provide power to shaft
         driving = component["is driver"]
         radius = component["diameter"]/2
         torque = 63025*component["power"]/n
@@ -79,13 +82,13 @@ def convert_component_to_load(context):
             # tight side
             rf_pair.append((
                 (0, rotation_direction*driving*radius, component["z"]),
-                (-driving*rotation_direction*nominal_force, 0, 0)
+                (nominal_force, 0, 0)
             ))
         elif component["component_type"] == ComponentType.CHAIN:
             # tight side
             rf_pair.append((
                 (0, rotation_direction*driving*radius, component["z"]),
-                (-driving*rotation_direction*nominal_force, 0, 0)
+                (nominal_force, 0, 0)
             ))
         elif component["component_type"] == ComponentType.SPUR_GEAR:
             Fx = -nominal_force*tan(component["pressure angle"])
@@ -257,7 +260,7 @@ def fbd3d(context):
         ret3d += r"    \node[below right] at "+f"(0,0,{npz0}){{${loads[i][1]}$}};\n"
 
     for force in forces:
-        nf = [x/normalized_unit_force for x in force[3]]
+        nf = [(x/normalized_unit_force) for x in force[3]]
         np = [
             force[2][0]/normalized_unit_radial_length,
             force[2][1]/normalized_unit_radial_length,
@@ -473,17 +476,19 @@ def divide_and_conquer(context):
     for component in context["components"]:
         summary[component["name"]] = {}
 
+        # left, middle, right
+        # middle is the maximum of left and right
         T = [0, 0, 0]
         V = [0, 0, 0]
         M = [0, 0, 0]
         for z, vzl, vzr in context["internal"]:
             if z == component["z"]:
-                T[0] = abs(vzl[5] if not isinstance(vzl[5], sym.Expr) else vzl[5].evalf(subs={S("z"): z}))
-                V[0] = abs(vzl[6] if not isinstance(vzl[6], sym.Expr) else vzl[6].evalf(subs={S("z"): z}))
-                M[0] = abs(vzl[7] if not isinstance(vzl[7], sym.Expr) else vzl[7].evalf(subs={S("z"): z}))
-                T[2] = abs(vzr[5])
-                V[2] = abs(vzr[6])
-                M[2] = abs(vzr[7])
+                T[0] = abs(vzl[5] if not isinstance(vzl[5], sym.Expr) else float(vzl[5].evalf(subs={S("z"): z})))
+                V[0] = abs(vzl[6] if not isinstance(vzl[6], sym.Expr) else float(vzl[6].evalf(subs={S("z"): z})))
+                M[0] = abs(vzl[7] if not isinstance(vzl[7], sym.Expr) else float(vzl[7].evalf(subs={S("z"): z})))
+                T[2] = abs(vzr[5] if not isinstance(vzr[5], sym.Expr) else float(vzr[5].evalf(subs={S("z"): z})))
+                V[2] = abs(vzr[6] if not isinstance(vzr[6], sym.Expr) else float(vzr[6].evalf(subs={S("z"): z})))
+                M[2] = abs(vzr[7] if not isinstance(vzr[7], sym.Expr) else float(vzr[7].evalf(subs={S("z"): z})))
                 T[1] = max(T[0], T[2])
                 V[1] = max(V[0], V[2])
                 M[1] = max(M[0], M[2])
@@ -499,6 +504,9 @@ def divide_and_conquer(context):
                 ) and
                     not side == "middle"):
                 logs.append(f"As there is no feature on the {side}, there is no need to analyze the {side} side separately")
+                summary[component["name"]][side] = 0
+            elif T[i] == 0 and V[i] == 0 and M[i] == 0:
+                logs.append(f"As there is no load on the {side}, there is no need to analyze the {side} side separately")
                 summary[component["name"]][side] = 0
             else:
                 logs.append(f'Solving for the minimum diameter on the {side} of point {component["name"]}')
